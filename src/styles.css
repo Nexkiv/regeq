@@ -1,0 +1,308 @@
+html {
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+}
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  --paper: #fafaf8;
+  --ink: #2b2d31;
+  --muted: #6d7077;
+  --hair: #dcdcd6;
+  --field: #f1f1ed;
+  --mark: #ecece6;
+  --accent: #3b5b86;
+  --good: #3f7b59;
+  --bad: #a64a42;
+  --serif:
+    "STIX Two Text", "STIX Two", "STIX Two Math", "STIXGeneral", "Cambria Math", "Cambria",
+    "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #202124;
+    --ink: #d9d7d1;
+    --muted: #9c9b97;
+    --hair: #3b3c40;
+    --field: #292a2e;
+    --mark: #303136;
+    --accent: #a0b9da;
+    --good: #8fc4a2;
+    --bad: #de9790;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 18px/1.6 var(--serif);
+  padding: 48px 16px 64px;
+}
+.page {
+  max-width: 620px;
+  margin: 0 auto;
+}
+p {
+  margin: 0;
+}
+code {
+  font: 400 0.84em var(--mono);
+  background: var(--mark);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--hair);
+  margin: 28px 0;
+}
+
+h1 {
+  font-size: 2.2rem;
+  font-weight: 400;
+  line-height: 1.15;
+  margin: 0;
+}
+.lead {
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Inputs */
+.givens {
+  margin-top: 28px;
+  display: grid;
+  gap: 10px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 5.2rem;
+  align-items: center;
+  gap: 10px;
+}
+.row label {
+  font-size: 1.15rem;
+  white-space: nowrap;
+}
+.row input {
+  min-width: 0;
+  width: 100%;
+  font: 400 1.02rem var(--mono);
+  color: var(--ink);
+  background: var(--field);
+  border: 0;
+  border-bottom: 1px solid var(--muted);
+  border-radius: 2px 2px 0 0;
+  padding: 8px 10px 6px;
+}
+.row input:focus {
+  outline: none;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 5px;
+}
+.row input.invalid {
+  border-bottom-color: var(--bad);
+}
+.keys {
+  display: flex;
+  gap: 6px;
+}
+.key {
+  font: 400 1rem var(--serif);
+  width: 2.3rem;
+  height: 2.1rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.key.eps {
+  font-style: italic;
+}
+.key:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.optional {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.95rem;
+}
+.err {
+  grid-column: 2 / -1;
+  color: var(--bad);
+  font-size: 0.93rem;
+}
+.err pre {
+  margin: 2px 0 0;
+  font: 400 0.9rem var(--mono);
+  color: var(--ink);
+  overflow-x: auto;
+}
+.err mark {
+  background: none;
+  color: var(--bad);
+  text-decoration: underline wavy var(--bad);
+  text-underline-offset: 4px;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Result, set like a theorem environment */
+.result {
+  display: grid;
+  gap: 8px;
+  min-height: 5.6em;
+}
+.env-name {
+  font-style: normal;
+  font-weight: 600;
+  margin-right: 0.45em;
+}
+.claim {
+  font-size: 1.25rem;
+  font-style: italic;
+}
+.claim .rel {
+  font-style: normal;
+  padding: 0 0.2em;
+}
+.claim.eq .rel {
+  color: var(--good);
+}
+.claim.ne .rel {
+  color: var(--bad);
+}
+.proof .env-name {
+  font-weight: 400;
+  font-style: italic;
+}
+.qed {
+  float: right;
+  margin-left: 1em;
+}
+.witness {
+  font: 500 0.95em var(--mono);
+  background: var(--mark);
+  padding: 1px 6px;
+  border-radius: 2px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.remark {
+  color: var(--muted);
+}
+
+/* Reference */
+details + details {
+  margin-top: 10px;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  width: fit-content;
+}
+details[open] summary {
+  margin-bottom: 12px;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.93rem;
+  border-top: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--ink);
+}
+thead th {
+  font-weight: 400;
+  font-style: italic;
+  text-align: left;
+  padding: 5px 16px 4px 0;
+  border-bottom: 0.75px solid var(--ink);
+}
+tbody td {
+  padding: 4px 16px 4px 0;
+  vertical-align: baseline;
+}
+tbody tr:first-child td {
+  padding-top: 8px;
+}
+tbody tr:last-child td {
+  padding-bottom: 8px;
+}
+th:last-child,
+td:last-child {
+  padding-right: 0;
+}
+td.expr {
+  font: 400 0.88rem var(--mono);
+  white-space: nowrap;
+}
+td.dim {
+  color: var(--muted);
+}
+td.act {
+  text-align: right;
+}
+.caption {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.load {
+  font: 400 0.93rem var(--serif);
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 0.5px;
+  text-underline-offset: 3px;
+}
+.load:hover {
+  text-decoration-thickness: 1.5px;
+}
+sup {
+  font-size: 0.7em;
+  line-height: 0;
+  color: var(--accent);
+}
+
+footer {
+  font-size: 0.88rem;
+  color: var(--muted);
+  display: grid;
+  gap: 4px;
+}
+a {
+  color: var(--accent);
+  text-decoration-thickness: 0.5px;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  body {
+    padding-top: 32px;
+    font-size: 17px;
+  }
+  .row {
+    grid-template-columns: 2.8rem 1fr auto;
+  }
+  .examples .dim {
+    display: none;
+  }
+}
