@@ -70,7 +70,7 @@
 
   /* Givens */
   .givens { margin-top: 36px; display: grid; gap: 14px; }
-  .row { display: grid; grid-template-columns: 3.2rem 1fr auto; align-items: end; gap: 12px; }
+  .row { display: grid; grid-template-columns: 3.2rem 1fr auto auto; align-items: end; gap: 12px; }
   .row label { font-size: 1.2rem; white-space: nowrap; padding-bottom: 6px; }
   .row input {
     min-width: 0;
@@ -95,9 +95,10 @@
     border-radius: 3px;
     cursor: pointer;
   }
+  .key[data-insert="Σ"] { font-style: normal; }
   .key:hover { color: var(--ink); border-color: var(--muted); }
   .key:focus-visible, .load:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .err { grid-column: 2 / 4; color: var(--bad); font-size: 0.95rem; }
+  .err { grid-column: 2 / -1; color: var(--bad); font-size: 0.95rem; }
   .err pre { margin: 2px 0 0; font: 400 0.9rem var(--mono); color: var(--ink); overflow-x: auto; }
   .err mark { background: none; color: var(--bad); text-decoration: underline wavy var(--bad); text-underline-offset: 4px; }
 
@@ -160,21 +161,23 @@
 <main class="page">
   <header>
     <h1>Regular Expression Equivalence</h1>
-    <p class="subtitle">RegEq, with digits and ε</p>
-    <p class="opening prose">Enter two regular expressions <span class="math">R</span>₁ and <span class="math">R</span>₂. The checker decides whether they describe the same language and, if they don’t, gives the shortest string that separates them. Any character may be a letter, including digits, and <i>ε</i> denotes the empty string.</p>
+    <p class="subtitle">RegEq, with digits, ε, and Σ</p>
+    <p class="opening prose">Enter two regular expressions <span class="math">R</span>₁ and <span class="math">R</span>₂. The checker decides whether they describe the same language and, if they don’t, gives the shortest string that separates them. Any character may be a letter, including digits, <i>ε</i> denotes the empty string, and Σ stands for any single letter of the alphabet.</p>
   </header>
 
   <div class="givens">
     <div class="row">
       <label for="regex-1"><i>R</i>₁ =</label>
       <input id="regex-1" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button type="button" class="key" data-target="regex-1" aria-label="Insert ε into R₁" title="Insert ε">ε</button>
+      <button type="button" class="key" data-target="regex-1" data-insert="ε" aria-label="Insert ε into R₁" title="Insert ε">ε</button>
+      <button type="button" class="key" data-target="regex-1" data-insert="Σ" aria-label="Insert Σ into R₁" title="Insert Σ">Σ</button>
       <div class="err" id="err-1" hidden></div>
     </div>
     <div class="row">
       <label for="regex-2"><i>R</i>₂ =</label>
       <input id="regex-2" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button type="button" class="key" data-target="regex-2" aria-label="Insert ε into R₂" title="Insert ε">ε</button>
+      <button type="button" class="key" data-target="regex-2" data-insert="ε" aria-label="Insert ε into R₂" title="Insert ε">ε</button>
+      <button type="button" class="key" data-target="regex-2" data-insert="Σ" aria-label="Insert Σ into R₂" title="Insert Σ">Σ</button>
       <div class="err" id="err-2" hidden></div>
     </div>
   </div>
@@ -206,6 +209,7 @@
         <tr><td class="expr">a^{N}<sup>†</sup></td><td>The same, but the braces end the count, so <code>1^{2}3</code> is 113.</td></tr>
         <tr><td class="expr">( a )</td><td>Grouping. <code>()</code> is the empty string.</td></tr>
         <tr><td class="expr">ε<sup>†</sup></td><td>The empty string. Write <code>\ε</code> for a literal ε.</td></tr>
+        <tr><td class="expr">Σ<sup>†</sup></td><td>Any one letter of the alphabet. If Σ = {0, 1}, then <code>Σ</code> means <code>(0|1)</code>. Write <code>\Σ</code> for a literal Σ.</td></tr>
         <tr><td class="expr">0–9<sup>†</sup></td><td>Ordinary letters, except inside a count.</td></tr>
         <tr><td class="expr">\x<sup>†</sup></td><td>The character x itself, as in <code>\*</code>, <code>\|</code>, or <code>\&nbsp;</code> for a space.</td></tr>
         <tr><td class="expr">space</td><td>Ignored, except that it ends a count, so <code>1^2 3</code> is 113.</td></tr>
@@ -238,6 +242,8 @@
         i++;
       } else if (c === "ε") {
         toks.push({ kind: "eps", v: c, pos: i, space });
+      } else if (c === "Σ") {
+        toks.push({ kind: "any", v: c, pos: i, space });
       } else if (OPS.has(c)) {
         toks.push({ kind: "op", v: c, pos: i, space });
       } else {
@@ -307,6 +313,7 @@
       }
       if (t.kind === "sym") { i++; return { type: "sym", c: t.v }; }
       if (t.kind === "eps") { i++; return { type: "eps" }; }
+      if (t.kind === "any") { i++; return { type: "any" }; }
       if (isOp(t, ")")) throw { msg: "This ) has no matching (.", pos: t.pos };
       throw { msg: `“${t.v}” needs something before it to apply to.`, pos: t.pos };
     }
@@ -332,7 +339,7 @@
   // Approximate Thompson-NFA size, to refuse huge expressions before building them.
   function size(node) {
     switch (node.type) {
-      case "sym": case "eps": return 2;
+      case "sym": case "eps": case "any": return 2;
       case "alt": return 2 + node.alts.reduce((s, n) => s + size(n), 0);
       case "cat": return node.items.reduce((s, n) => s + size(n), 0);
       case "star": case "plus": case "opt": return 2 + size(node.a);
@@ -341,7 +348,8 @@
   }
 
   // ---------- Thompson NFA ----------
-  function buildNFA(ast) {
+  // "any" (Σ) becomes one transition per letter of the shared alphabet.
+  function buildNFA(ast, alphabet) {
     if (size(ast) > 400000) throw { msg: "This expression is too large to check (too many repeats)." };
     const eps = [], trans = [];
     const add = () => { eps.push([]); trans.push([]); return eps.length - 1; };
@@ -350,6 +358,7 @@
       switch (n.type) {
         case "eps": eps[s].push(e); break;
         case "sym": trans[s].push([n.c, e]); break;
+        case "any": for (const c of alphabet) trans[s].push([c, e]); break;
         case "alt":
           for (const a of n.alts) { const f = build(a); eps[s].push(f.s); eps[f.e].push(e); }
           break;
@@ -456,6 +465,7 @@
     ["(0|1)*0", "(1*0)+", "strings ending in 0"],
     ["(0|1)*", "0*1*", "a proper subset"],
     ["(0|ε)1*", "0?1*", "ε inside a union"],
+    ["Σ*1Σ*", "0*1(0|1)*", "Σ as any letter"],
     ["(01)*", "0(10)*1|", "an empty union branch"],
     ["1^{2}3", "113", "braces ending a count"],
     ["(0|1)^3", "000|001|010|011|100|101|110", "one missing string"],
@@ -486,7 +496,7 @@
     key.addEventListener("click", () => {
       const x = $(key.dataset.target);
       const start = x.selectionStart ?? x.value.length, end = x.selectionEnd ?? x.value.length;
-      x.setRangeText("ε", start, end, "end");
+      x.setRangeText(key.dataset.insert, start, end, "end");
       x.focus();
       run();
     });
@@ -559,7 +569,7 @@
 
     let result;
     try {
-      const d = asts.map((a) => lazyDFA(buildNFA(a)));
+      const d = asts.map((a) => lazyDFA(buildNFA(a, alphabet)));
       result = compare(d[0], d[1], alphabet);
     } catch (e) {
       setRemark(e.msg || String(e));
