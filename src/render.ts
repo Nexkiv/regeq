@@ -35,6 +35,13 @@ function setProof(...parts: (Node | string)[]) {
   p.replaceChildren(envName("Proof."), ...parts, el("span", "qed", "∎"));
 }
 
+/** Marks the result as out of date while a slow check runs. */
+export function setChecking(checking: boolean) {
+  const region = $("result");
+  region.setAttribute("aria-busy", String(checking));
+  if (checking) setRemark("Checking…");
+}
+
 export function setRemark(text: string) {
   $("claim").hidden = true;
   const p = $("proof");
@@ -79,6 +86,23 @@ export function renderResult(result: CheckResult) {
   }
 
   const [big, small, w] = only1 ? ([1, 2, only1] as const) : ([2, 1, only2!] as const);
+  if (result.partial) {
+    // The other direction was never finished, so only inequality is proven.
+    setClaim("ne", 1, "≠", 2);
+    setProof(
+      ...subject(w, true),
+      " is in ",
+      lang(big),
+      " but not in ",
+      lang(small),
+      `, and it is the shortest such string over ${sigma}. The search stopped early, after ${explored.toLocaleString()} state pairs, so it did not check for strings in `,
+      lang(small),
+      " but not in ",
+      lang(big),
+      ".",
+    );
+    return;
+  }
   setClaim("ne", small, "⊊", big);
   setProof(
     "Every string in ",

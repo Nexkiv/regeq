@@ -23,7 +23,12 @@ describe("equivalence", () => {
   });
 
   it("finds a shortest witness on each side", () => {
-    expect(compare("0*", "1*")).toMatchObject({ status: "differ", only1: "0", only2: "1" });
+    expect(compare("0*", "1*")).toMatchObject({
+      status: "differ",
+      partial: false,
+      only1: "0",
+      only2: "1",
+    });
   });
 
   it("reports a proper subset in either direction", () => {
@@ -162,8 +167,23 @@ describe("prompts and errors", () => {
     });
   });
 
+  it("keeps a witness found before the state-pair limit", () => {
+    expect(compare("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5|2", "", 20)).toMatchObject({
+      status: "differ",
+      partial: true,
+      only1: null,
+      only2: "2",
+      explored: 20,
+    });
+    expect(compare("(0|1)*1(0|1)^17", "(0|1)*1(0|1)^17|2")).toMatchObject({
+      status: "differ",
+      partial: true,
+      only2: "2",
+    });
+  });
+
   it("gives up past the state-pair limit", () => {
-    expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5|2", "", 20)).toMatchObject({
+    expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5", "", 20)).toMatchObject({
       status: "tooBig",
       message:
         "These expressions are too large to check: the combined automaton passes 20 states. Try smaller repeat counts.",

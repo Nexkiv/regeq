@@ -23,6 +23,8 @@ export type CheckResult =
       /** Shortest strings in L(R₁) but not L(R₂), and vice versa; null if there are none. */
       only1: string[] | null;
       only2: string[] | null;
+      /** The search hit the state-pair limit: the missing side is unknown, not proven empty. */
+      partial: boolean;
       errors: [];
     };
 
@@ -120,16 +122,17 @@ export function check(
     alphabet,
     limit,
   );
-  if (search.cutOff)
+  const { only1, only2, explored, cutOff } = search;
+  if (only1 || only2)
+    return { status: "differ", alphabet, explored, only1, only2, partial: cutOff, errors: [] };
+  if (cutOff)
     return {
       status: "tooBig",
       message: `These expressions are too large to check: the combined automaton passes ${limit.toLocaleString("en-US")} states. Try smaller repeat counts.`,
       errors: [],
     };
 
-  const { only1, only2, explored } = search;
-  if (!only1 && !only2) return { status: "equal", alphabet, explored, errors: [] };
-  return { status: "differ", alphabet, explored, only1, only2, errors: [] };
+  return { status: "equal", alphabet, explored, errors: [] };
 }
 
 /** Shows a space as ␣ so it is visible in messages and witnesses. */
