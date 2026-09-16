@@ -30,7 +30,7 @@ describe("parse", () => {
       type: "cat",
       items: [
         { type: "eps" },
-        { type: "any" },
+        { type: "any", pos: 1 },
         { type: "sym", c: "ε", pos: 2 },
         { type: "sym", c: "Σ", pos: 4 },
         { type: "sym", c: " ", pos: 6 },
@@ -119,7 +119,7 @@ describe("parseSigma", () => {
 
 describe("letters", () => {
   it("lists letter nodes in source order, skipping ε and Σ", () => {
-    const found = [...letters(parse("(ab|εc)*Σd?e+f^2"))].map((n) => n.c);
+    const found = letters(parse("(ab|εc)*Σd?e+f^2")).map((n) => n.c);
     expect(found).toEqual(["a", "b", "c", "d", "e", "f"]);
   });
 });

@@ -15,7 +15,7 @@ export type SymNode = { type: "sym"; c: string; pos: number };
 export type Node =
   | SymNode
   | { type: "eps" }
-  | { type: "any" }
+  | { type: "any"; pos: number }
   | { type: "alt"; alts: Node[] }
   | { type: "cat"; items: Node[] }
   | { type: "star" | "plus" | "opt"; a: Node }
@@ -147,7 +147,7 @@ export function parse(src: string): Node {
     }
     if (t.kind === "sym") return { type: "sym", c: t.v, pos: t.pos };
     if (t.kind === "eps") return { type: "eps" };
-    if (t.kind === "any") return { type: "any" };
+    if (t.kind === "any") return { type: "any", pos: t.pos };
     throw new RegexSyntaxError(`“${t.v}” needs something before it to apply to.`, t.pos);
   }
 
@@ -184,28 +184,31 @@ export function parseSigma(src: string): Set<string> {
   return out;
 }
 
-/** Every letter node in the expression, in source order. */
-export function* letters(node: Node): Generator<SymNode> {
+/** Every node of the expression, parents before children, in source order. */
+export function* walk(node: Node): Generator<Node> {
+  yield node;
   switch (node.type) {
     case "sym":
-      yield node;
-      return;
     case "eps":
     case "any":
       return;
     case "alt":
-      for (const n of node.alts) yield* letters(n);
+      for (const n of node.alts) yield* walk(n);
       return;
     case "cat":
-      for (const n of node.items) yield* letters(n);
+      for (const n of node.items) yield* walk(n);
       return;
     case "star":
     case "plus":
     case "opt":
     case "rep":
-      yield* letters(node.a);
+      yield* walk(node.a);
       return;
     default:
       assertNever(node);
   }
 }
+
+/** Every letter node of the expression, in source order. */
+export const letters = (node: Node): SymNode[] =>
+  [...walk(node)].filter((n): n is SymNode => n.type === "sym");

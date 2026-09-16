@@ -88,6 +88,46 @@ describe("prompts and errors", () => {
     });
   });
 
+  it("asks for the other expression when one box is empty", () => {
+    expect(check("0", "", "")).toEqual({
+      status: "prompt",
+      message: "Enter R₂ to compare.",
+      errors: [],
+    });
+    expect(check(" ", "0", "")).toMatchObject({
+      status: "prompt",
+      message: "Enter R₁ to compare.",
+    });
+  });
+
+  it("still shows errors while a box is empty", () => {
+    expect(check("(", "", "")).toMatchObject({
+      status: "invalid",
+      errors: [{ field: "r1", message: "This ( is never closed.", pos: 0 }],
+    });
+    expect(check("", "", "ε")).toMatchObject({
+      status: "prompt",
+      message: "Enter two regular expressions to compare them.",
+      errors: [{ field: "sigma", pos: 0 }],
+    });
+  });
+
+  it("asks for an alphabet when Σ has no letters to stand for", () => {
+    expect(check("Σ*", "ε", "")).toEqual({
+      status: "invalid",
+      message: "Enter an alphabet in the Σ box to see a result.",
+      errors: [
+        {
+          field: "r1",
+          message: "Σ has no letters to stand for, because neither expression contains a letter.",
+          pos: 0,
+        },
+      ],
+    });
+    expect(check("ε", "(Σ|Σ)", "")).toMatchObject({ errors: [{ field: "r2", pos: 1 }] });
+    expect(check("Σ*", "ε", "{}")).toMatchObject({ status: "equal", alphabet: [] });
+  });
+
   it("names the expressions that have errors", () => {
     expect(check("(", "0", "")).toMatchObject({
       message: "Fix the error in R₁ to see a result.",
