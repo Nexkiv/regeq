@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Check whether two regular expressions describe the same language. Digits count as letters, and ε is the empty string.">
+<meta name="description" content="Check whether two regular expressions describe the same language. Digits count as letters, ε is the empty string, and Σ is any letter.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔣</text></svg>">
 <style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>RegEq with Digits</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root {
     --paper: #fafaf8;
@@ -53,59 +53,57 @@
   body {
     background: var(--paper);
     color: var(--ink);
-    font: 400 18px/1.65 var(--serif);
-    font-kerning: normal;
-    padding: 64px 16px 80px;
+    font: 400 18px/1.6 var(--serif);
+    padding: 48px 16px 64px;
   }
-  .page { max-width: 640px; margin: 0 auto; }
+  .page { max-width: 620px; margin: 0 auto; }
   p { margin: 0; }
-  i, .math { font-style: italic; }
   code { font: 400 0.84em var(--mono); background: var(--mark); padding: 1px 4px; border-radius: 2px; }
-  .prose { text-align: justify; hyphens: auto; }
+  hr { border: 0; border-top: 1px solid var(--hair); margin: 28px 0; }
 
-  /* Chapter opening */
-  h1 { font-size: 2.1rem; font-weight: 400; line-height: 1.2; margin: 0; text-wrap: balance; }
-  .subtitle { font-variant: small-caps; letter-spacing: 0.04em; color: var(--muted); margin-top: 4px; }
-  .opening { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--hair); }
+  h1 { font-size: 2.2rem; font-weight: 400; line-height: 1.15; margin: 0; }
+  .lead { color: var(--muted); margin-top: 4px; }
 
-  /* Givens */
-  .givens { margin-top: 36px; display: grid; gap: 14px; }
-  .row { display: grid; grid-template-columns: 3.2rem 1fr auto auto; align-items: end; gap: 12px; }
-  .row label { font-size: 1.2rem; white-space: nowrap; padding-bottom: 6px; }
+  /* Inputs */
+  .givens { margin-top: 28px; display: grid; gap: 10px; }
+  .row { display: grid; grid-template-columns: 3.2rem 1fr 5.2rem; align-items: center; gap: 10px; }
+  .row label { font-size: 1.15rem; white-space: nowrap; }
   .row input {
     min-width: 0;
     width: 100%;
-    font: 400 1.05rem var(--mono);
+    font: 400 1.02rem var(--mono);
     color: var(--ink);
     background: var(--field);
     border: 0;
     border-bottom: 1px solid var(--muted);
     border-radius: 2px 2px 0 0;
-    padding: 9px 10px 7px;
+    padding: 8px 10px 6px;
   }
-  .row input:focus { outline: none; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+  .row input:focus { outline: none; border-bottom: 2px solid var(--accent); padding-bottom: 5px; }
   .row input.invalid { border-bottom-color: var(--bad); }
+  .keys { display: flex; gap: 6px; }
   .key {
-    font: italic 400 1.1rem var(--serif);
+    font: 400 1rem var(--serif);
     width: 2.3rem;
-    height: 2.3rem;
+    height: 2.1rem;
     color: var(--muted);
     background: transparent;
     border: 1px solid var(--hair);
     border-radius: 3px;
     cursor: pointer;
   }
-  .key[data-insert="Σ"] { font-style: normal; }
+  .key.eps { font-style: italic; }
   .key:hover { color: var(--ink); border-color: var(--muted); }
-  .key:focus-visible, .load:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .err { grid-column: 2 / -1; color: var(--bad); font-size: 0.95rem; }
+  .optional { color: var(--muted); font-style: italic; font-size: 0.95rem; }
+  .err { grid-column: 2 / -1; color: var(--bad); font-size: 0.93rem; }
   .err pre { margin: 2px 0 0; font: 400 0.9rem var(--mono); color: var(--ink); overflow-x: auto; }
   .err mark { background: none; color: var(--bad); text-decoration: underline wavy var(--bad); text-underline-offset: 4px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* Claim and proof, set like a theorem environment */
-  .result { margin-top: 40px; display: grid; gap: 10px; }
+  /* Result, set like a theorem environment */
+  .result { display: grid; gap: 8px; min-height: 5.6em; }
   .env-name { font-style: normal; font-weight: 600; margin-right: 0.45em; }
-  .claim { font-size: 1.3rem; font-style: italic; }
+  .claim { font-size: 1.25rem; font-style: italic; }
   .claim .rel { font-style: normal; padding: 0 0.2em; }
   .claim.eq .rel { color: var(--good); }
   .claim.ne .rel { color: var(--bad); }
@@ -114,23 +112,23 @@
   .witness { font: 500 0.95em var(--mono); background: var(--mark); padding: 1px 6px; border-radius: 2px; white-space: pre-wrap; word-break: break-all; }
   .remark { color: var(--muted); }
 
-  /* Sections */
-  h2 { font-size: 1.3rem; font-weight: 600; margin: 56px 0 14px; }
-
-  /* Booktabs-style tables */
+  /* Reference */
+  details + details { margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 600; width: fit-content; }
+  details[open] summary { margin-bottom: 12px; }
   .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
-  table { border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
-  thead th { font-weight: 400; font-style: italic; text-align: left; padding: 6px 18px 5px 0; border-bottom: 0.75px solid var(--ink); }
-  tbody td { padding: 5px 18px 5px 0; vertical-align: baseline; }
-  tbody tr:first-child td { padding-top: 9px; }
-  tbody tr:last-child td { padding-bottom: 9px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.93rem; border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+  thead th { font-weight: 400; font-style: italic; text-align: left; padding: 5px 16px 4px 0; border-bottom: 0.75px solid var(--ink); }
+  tbody td { padding: 4px 16px 4px 0; vertical-align: baseline; }
+  tbody tr:first-child td { padding-top: 8px; }
+  tbody tr:last-child td { padding-bottom: 8px; }
   th:last-child, td:last-child { padding-right: 0; }
-  td.expr { font: 400 0.9rem var(--mono); white-space: nowrap; }
+  td.expr { font: 400 0.88rem var(--mono); white-space: nowrap; }
   td.dim { color: var(--muted); }
   td.act { text-align: right; }
+  .caption { margin-top: 8px; font-size: 0.9rem; color: var(--muted); }
   .load {
-    font: 400 0.95rem var(--serif);
+    font: 400 0.93rem var(--serif);
     color: var(--accent);
     background: none;
     border: 0;
@@ -141,86 +139,100 @@
     text-underline-offset: 3px;
   }
   .load:hover { text-decoration-thickness: 1.5px; }
-  .caption { margin-top: 8px; font-size: 0.92rem; color: var(--muted); }
   sup { font-size: 0.7em; line-height: 0; color: var(--accent); }
 
-  /* Footnotes */
-  .footnotes { margin-top: 56px; font-size: 0.88rem; color: var(--muted); display: grid; gap: 6px; }
-  .footnotes::before { content: ""; width: 30%; border-top: 0.75px solid var(--muted); margin-bottom: 6px; }
+  footer { font-size: 0.88rem; color: var(--muted); display: grid; gap: 4px; }
   a { color: var(--accent); text-decoration-thickness: 0.5px; text-underline-offset: 2px; }
 
   @media (max-width: 560px) {
-    body { padding-top: 36px; font-size: 17px; }
-    .prose { text-align: left; }
-    .examples td.dim, .examples th.dim { display: none; }
+    body { padding-top: 32px; font-size: 17px; }
+    .row { grid-template-columns: 2.8rem 1fr auto; }
+    .examples .dim { display: none; }
   }
 </style>
 </head>
 <body>
 
 <main class="page">
-  <header>
-    <h1>Regular Expression Equivalence</h1>
-    <p class="subtitle">RegEq, with digits, ε, and Σ</p>
-    <p class="opening prose">Enter two regular expressions <span class="math">R</span>₁ and <span class="math">R</span>₂. The checker decides whether they describe the same language and, if they don’t, gives the shortest string that separates them. Any character may be a letter, including digits, <i>ε</i> denotes the empty string, and Σ stands for any single letter of the alphabet.</p>
-  </header>
+  <h1>RegEq</h1>
+  <p class="lead">Check equivalence of regular expressions</p>
 
   <div class="givens">
     <div class="row">
       <label for="regex-1"><i>R</i>₁ =</label>
       <input id="regex-1" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button type="button" class="key" data-target="regex-1" data-insert="ε" aria-label="Insert ε into R₁" title="Insert ε">ε</button>
-      <button type="button" class="key" data-target="regex-1" data-insert="Σ" aria-label="Insert Σ into R₁" title="Insert Σ">Σ</button>
+      <span class="keys">
+        <button type="button" class="key eps" data-target="regex-1" data-insert="ε" aria-label="Insert ε into R₁" title="Insert ε">ε</button>
+        <button type="button" class="key" data-target="regex-1" data-insert="Σ" aria-label="Insert Σ into R₁" title="Insert Σ">Σ</button>
+      </span>
       <div class="err" id="err-1" hidden></div>
     </div>
     <div class="row">
       <label for="regex-2"><i>R</i>₂ =</label>
       <input id="regex-2" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button type="button" class="key" data-target="regex-2" data-insert="ε" aria-label="Insert ε into R₂" title="Insert ε">ε</button>
-      <button type="button" class="key" data-target="regex-2" data-insert="Σ" aria-label="Insert Σ into R₂" title="Insert Σ">Σ</button>
+      <span class="keys">
+        <button type="button" class="key eps" data-target="regex-2" data-insert="ε" aria-label="Insert ε into R₂" title="Insert ε">ε</button>
+        <button type="button" class="key" data-target="regex-2" data-insert="Σ" aria-label="Insert Σ into R₂" title="Insert Σ">Σ</button>
+      </span>
       <div class="err" id="err-2" hidden></div>
+    </div>
+    <div class="row">
+      <label for="sigma">Σ =</label>
+      <input id="sigma" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="sigma-note">
+      <span class="optional" id="sigma-note">optional</span>
+      <div class="err" id="err-sigma" hidden></div>
     </div>
   </div>
 
+  <hr>
+
   <section class="result" aria-live="polite">
     <p class="claim" id="claim"></p>
-    <p class="proof prose" id="proof"></p>
+    <p class="proof" id="proof"></p>
   </section>
 
-  <h2>Examples</h2>
-  <div class="table-wrap examples">
-    <table>
-      <thead><tr><th>R₁</th><th>R₂</th><th class="dim">Shows</th><th></th></tr></thead>
-      <tbody id="examples"></tbody>
-    </table>
-  </div>
+  <hr>
 
-  <h2>Syntax</h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Expression</th><th>Meaning</th></tr></thead>
-      <tbody>
-        <tr><td class="expr">a | b</td><td>Union. Either side may be empty, so <code>a|</code> matches a or nothing.</td></tr>
-        <tr><td class="expr">a b</td><td>Concatenation.</td></tr>
-        <tr><td class="expr">a?</td><td>Zero or one copy of a.</td></tr>
-        <tr><td class="expr">a*</td><td>Zero or more copies.</td></tr>
-        <tr><td class="expr">a+</td><td>One or more copies.</td></tr>
-        <tr><td class="expr">a^N</td><td>Exactly <i>N</i> copies. Every digit right after <code>^</code> is part of <i>N</i>.</td></tr>
-        <tr><td class="expr">a^{N}<sup>†</sup></td><td>The same, but the braces end the count, so <code>1^{2}3</code> is 113.</td></tr>
-        <tr><td class="expr">( a )</td><td>Grouping. <code>()</code> is the empty string.</td></tr>
-        <tr><td class="expr">ε<sup>†</sup></td><td>The empty string. Write <code>\ε</code> for a literal ε.</td></tr>
-        <tr><td class="expr">Σ<sup>†</sup></td><td>Any one letter of the alphabet. If Σ = {0, 1}, then <code>Σ</code> means <code>(0|1)</code>. Write <code>\Σ</code> for a literal Σ.</td></tr>
-        <tr><td class="expr">0–9<sup>†</sup></td><td>Ordinary letters, except inside a count.</td></tr>
-        <tr><td class="expr">\x<sup>†</sup></td><td>The character x itself, as in <code>\*</code>, <code>\|</code>, or <code>\&nbsp;</code> for a space.</td></tr>
-        <tr><td class="expr">space</td><td>Ignored, except that it ends a count, so <code>1^2 3</code> is 113.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="caption">Operators are listed from loosest to tightest binding. Both expressions are read over a single alphabet Σ: every letter that appears in either one.</p>
+  <details>
+    <summary>Syntax</summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Expression</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td class="expr">a | b</td><td>Union. Either side may be empty, so <code>a|</code> matches a or nothing.</td></tr>
+          <tr><td class="expr">a b</td><td>Concatenation.</td></tr>
+          <tr><td class="expr">a?</td><td>Zero or one copy.</td></tr>
+          <tr><td class="expr">a*</td><td>Zero or more copies.</td></tr>
+          <tr><td class="expr">a+</td><td>One or more copies.</td></tr>
+          <tr><td class="expr">a^N</td><td>Exactly <i>N</i> copies. Every digit right after <code>^</code> is part of <i>N</i>.</td></tr>
+          <tr><td class="expr">a^{N}<sup>†</sup></td><td>The same, but the braces end the count, so <code>1^{2}3</code> is 113.</td></tr>
+          <tr><td class="expr">( a )</td><td>Grouping. <code>()</code> is the empty string.</td></tr>
+          <tr><td class="expr">ε<sup>†</sup></td><td>The empty string.</td></tr>
+          <tr><td class="expr">Σ<sup>†</sup></td><td>Any one letter of the alphabet. If Σ = {0, 1}, then <code>Σ</code> means <code>(0|1)</code>.</td></tr>
+          <tr><td class="expr">0–9<sup>†</sup></td><td>Ordinary letters, except inside a count.</td></tr>
+          <tr><td class="expr">\x<sup>†</sup></td><td>The character x itself, as in <code>\*</code>, <code>\ε</code>, <code>\Σ</code>, or <code>\&nbsp;</code> for a space.</td></tr>
+          <tr><td class="expr">space</td><td>Ignored, except that it ends a count, so <code>1^2 3</code> is 113.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Operators are listed from loosest to tightest binding. The Σ box takes letters separated by commas or spaces, such as <code>0, 1, 2</code>; braces are optional. Leave it empty and Σ is every letter that appears in <i>R</i>₁ or <i>R</i>₂.</p>
+  </details>
 
-  <footer class="footnotes">
-    <p><sup>†</sup> Not in the original RegEq.</p>
+  <details class="examples">
+    <summary>Examples</summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th><i>R</i>₁</th><th><i>R</i>₂</th><th>Σ</th><th class="dim">Shows</th><th></th></tr></thead>
+        <tbody id="examples"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <hr>
+
+  <footer>
     <p>Based on <a href="https://bakkot.github.io/dfa-lib/regeq.html">RegEq</a> by Kevin Gibbons, written for Stanford CS103.</p>
+    <p><sup>†</sup> Not in the original RegEq.</p>
   </footer>
 </main>
 
@@ -311,7 +323,7 @@
         i++;
         return inner;
       }
-      if (t.kind === "sym") { i++; return { type: "sym", c: t.v }; }
+      if (t.kind === "sym") { i++; return { type: "sym", c: t.v, pos: t.pos }; }
       if (t.kind === "eps") { i++; return { type: "eps" }; }
       if (t.kind === "any") { i++; return { type: "any" }; }
       if (isOp(t, ")")) throw { msg: "This ) has no matching (.", pos: t.pos };
@@ -324,6 +336,37 @@
       throw { msg: isOp(t, ")") ? "This ) has no matching (." : `Unexpected “${t.v}”.`, pos: t.pos };
     }
     return ast;
+  }
+
+  // First letter node (in source order) that is not in the given alphabet.
+  function firstForeign(node, sigma) {
+    switch (node.type) {
+      case "sym": return sigma.has(node.c) ? null : node;
+      case "alt": case "cat":
+        for (const n of node.alts || node.items) { const f = firstForeign(n, sigma); if (f) return f; }
+        return null;
+      case "star": case "plus": case "opt": case "rep": return firstForeign(node.a, sigma);
+      default: return null;
+    }
+  }
+
+  // Explicit alphabet: every character except spaces, commas and braces is a letter.
+  function parseSigma(src) {
+    const chars = Array.from(src);
+    const out = new Set();
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i];
+      if (/\s/.test(c) || c === "," || c === "{" || c === "}") continue;
+      if (c === "\\") {
+        if (i + 1 >= chars.length) throw { msg: "A backslash needs a character after it.", pos: i };
+        out.add(chars[++i]);
+      } else if (c === "ε" || c === "Σ") {
+        throw { msg: `${c} can't be a letter here. Write \\${c} for a literal ${c}.`, pos: i };
+      } else {
+        out.add(c);
+      }
+    }
+    return out;
   }
 
   function symbols(node, out) {
@@ -459,23 +502,27 @@
   const $ = (id) => document.getElementById(id);
   const inputs = [$("regex-1"), $("regex-2")];
   const errs = [$("err-1"), $("err-2")];
+  const sigmaInput = $("sigma");
+  const sigmaErr = $("err-sigma");
   const show = (c) => (c === " " ? "␣" : c);
+  const byCode = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
   const EXAMPLES = [
-    ["(0|1)*0", "(1*0)+", "strings ending in 0"],
-    ["(0|1)*", "0*1*", "a proper subset"],
-    ["(0|ε)1*", "0?1*", "ε inside a union"],
-    ["Σ*1Σ*", "0*1(0|1)*", "Σ as any letter"],
-    ["(01)*", "0(10)*1|", "an empty union branch"],
-    ["1^{2}3", "113", "braces ending a count"],
-    ["(0|1)^3", "000|001|010|011|100|101|110", "one missing string"],
+    ["(0|1)*0", "(1*0)+", "", "strings ending in 0"],
+    ["(0|1)*", "0*1*", "", "a proper subset"],
+    ["(0|ε)1*", "0?1*", "", "ε inside a union"],
+    ["Σ*1Σ*", "0*1(0|1)*", "", "Σ as any letter"],
+    ["Σ*", "0*", "0, 1", "Σ set by hand"],
+    ["1^{2}3", "113", "", "braces ending a count"],
+    ["(0|1)^3", "000|001|010|011|100|101|110", "", "one missing string"],
   ];
   const exBody = $("examples");
-  for (const [a, b, what] of EXAMPLES) {
+  for (const [a, b, sig, what] of EXAMPLES) {
     const tr = document.createElement("tr");
     const cell = (text, cls) => { const td = document.createElement("td"); td.className = cls; td.textContent = text; tr.appendChild(td); return td; };
     cell(a, "expr");
     cell(b, "expr");
+    cell(sig ? `{${sig}}` : "", "expr");
     cell(what, "dim");
     const btn = document.createElement("button");
     btn.type = "button";
@@ -485,6 +532,7 @@
     btn.addEventListener("click", () => {
       inputs[0].value = a;
       inputs[1].value = b;
+      sigmaInput.value = sig;
       run();
       window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     });
@@ -502,10 +550,14 @@
     });
   });
 
-  function showError(k, src, e) {
-    inputs[k].classList.add("invalid");
-    const box = errs[k];
+  function clearError(input, box) {
+    input.classList.remove("invalid");
+    box.hidden = true;
+  }
+  function showError(input, box, e) {
+    input.classList.add("invalid");
     box.replaceChildren(e.msg || String(e));
+    const src = input.value;
     if (typeof e.pos === "number" && src.trim()) {
       const chars = Array.from(src);
       const pre = document.createElement("pre");
@@ -521,7 +573,6 @@
   const el = (tag, cls, ...kids) => { const n = document.createElement(tag); if (cls) n.className = cls; n.append(...kids); return n; };
   const lang = (n) => el("span", "", el("i", "", "L"), "(", el("i", "", "R"), n === 1 ? "₁" : "₂", ")");
   const envName = (name) => el("span", "env-name", name);
-  const qed = () => el("span", "qed", "∎");
   function subject(w, capital) {
     if (w.length === 0) return [capital ? "The empty string " : "the empty string ", el("i", "", "ε")];
     return [capital ? "The string " : "the string ", el("span", "witness", w.map(show).join(""))];
@@ -535,37 +586,54 @@
   }
   function setProof(...parts) {
     const p = $("proof");
-    p.className = "proof prose";
-    p.replaceChildren(envName("Proof."), ...parts, qed());
+    p.className = "proof";
+    p.replaceChildren(envName("Proof."), ...parts, el("span", "qed", "∎"));
   }
   function setRemark(text) {
     $("claim").hidden = true;
     const p = $("proof");
-    p.className = "remark prose";
-    p.replaceChildren(envName("Remark."), text);
+    p.className = "remark";
+    p.replaceChildren(text);
   }
 
   function run() {
+    [0, 1].forEach((k) => clearError(inputs[k], errs[k]));
+    clearError(sigmaInput, sigmaErr);
+
     if (inputs.every((x) => !x.value.trim())) {
-      inputs.forEach((x, k) => { x.classList.remove("invalid"); errs[k].hidden = true; });
-      setRemark("Enter two expressions to compare them, or load one of the examples below.");
+      setRemark("Enter two regular expressions to compare them.");
       return;
     }
 
     const asts = inputs.map((input, k) => {
-      input.classList.remove("invalid");
-      errs[k].hidden = true;
       try { return parse(input.value); }
-      catch (e) { showError(k, input.value, e); return null; }
+      catch (e) { showError(input, errs[k], e); return null; }
     });
+
+    let given = null;
+    if (sigmaInput.value.trim()) {
+      try { given = parseSigma(sigmaInput.value); }
+      catch (e) { showError(sigmaInput, sigmaErr, e); setRemark("Fix the error in Σ to see a result."); return; }
+    }
+
+    // With Σ given, every letter in the expressions must belong to it.
+    if (given) {
+      asts.forEach((ast, k) => {
+        const bad = ast && firstForeign(ast, given);
+        if (bad) {
+          showError(inputs[k], errs[k], { msg: `“${show(bad.c)}” isn't in Σ. Add it to Σ, or clear Σ to use the letters in the expressions.`, pos: bad.pos });
+          asts[k] = null;
+        }
+      });
+    }
+
     if (!asts[0] || !asts[1]) {
       const which = !asts[0] && !asts[1] ? "both expressions" : !asts[0] ? "R₁" : "R₂";
       setRemark(`Fix the error in ${which} to see a result.`);
       return;
     }
 
-    const alphabet = [...symbols(asts[0], symbols(asts[1], new Set()))]
-      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const alphabet = [...(given || symbols(asts[0], symbols(asts[1], new Set())))].sort(byCode);
 
     let result;
     try {
@@ -605,7 +673,7 @@
     }
   }
 
-  inputs.forEach((x) => x.addEventListener("input", run));
+  [...inputs, sigmaInput].forEach((x) => x.addEventListener("input", run));
   run();
 })();
 </script>
