@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Check whether two regular expressions describe the same language. Digits count as letters, and ε is the empty string.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔣</text></svg>">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>RegEq with Digits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #fafaf8;
+    --ink: #2b2d31;
+    --muted: #6d7077;
+    --hair: #dcdcd6;
+    --field: #f1f1ed;
+    --mark: #ecece6;
+    --accent: #3b5b86;
+    --good: #3f7b59;
+    --bad: #a64a42;
+    --serif: "STIX Two Text", "STIX Two", "Cambria", "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #202124;
+      --ink: #d9d7d1;
+      --muted: #9c9b97;
+      --hair: #3b3c40;
+      --field: #292a2e;
+      --mark: #303136;
+      --accent: #a0b9da;
+      --good: #8fc4a2;
+      --bad: #de9790;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #202124;
+    --ink: #d9d7d1;
+    --muted: #9c9b97;
+    --hair: #3b3c40;
+    --field: #292a2e;
+    --mark: #303136;
+    --accent: #a0b9da;
+    --good: #8fc4a2;
+    --bad: #de9790;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 18px/1.65 var(--serif);
+    font-kerning: normal;
+    padding: 64px 16px 80px;
+  }
+  .page { max-width: 640px; margin: 0 auto; }
+  p { margin: 0; }
+  i, .math { font-style: italic; }
+  code { font: 400 0.84em var(--mono); background: var(--mark); padding: 1px 4px; border-radius: 2px; }
+  .prose { text-align: justify; hyphens: auto; }
+
+  /* Chapter opening */
+  h1 { font-size: 2.1rem; font-weight: 400; line-height: 1.2; margin: 0; text-wrap: balance; }
+  .subtitle { font-variant: small-caps; letter-spacing: 0.04em; color: var(--muted); margin-top: 4px; }
+  .opening { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--hair); }
+
+  /* Givens */
+  .givens { margin-top: 36px; display: grid; gap: 14px; }
+  .row { display: grid; grid-template-columns: 3.2rem 1fr auto; align-items: end; gap: 12px; }
+  .row label { font-size: 1.2rem; white-space: nowrap; padding-bottom: 6px; }
+  .row input {
+    min-width: 0;
+    width: 100%;
+    font: 400 1.05rem var(--mono);
+    color: var(--ink);
+    background: var(--field);
+    border: 0;
+    border-bottom: 1px solid var(--muted);
+    border-radius: 2px 2px 0 0;
+    padding: 9px 10px 7px;
+  }
+  .row input::placeholder { color: var(--muted); opacity: 0.7; }
+  .row input:focus { outline: none; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+  .row input.invalid { border-bottom-color: var(--bad); }
+  .key {
+    font: italic 400 1.1rem var(--serif);
+    width: 2.3rem;
+    height: 2.3rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .key:hover { color: var(--ink); border-color: var(--muted); }
+  .key:focus-visible, .load:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .err { grid-column: 2 / 4; color: var(--bad); font-size: 0.95rem; }
+  .err pre { margin: 2px 0 0; font: 400 0.9rem var(--mono); color: var(--ink); overflow-x: auto; }
+  .err mark { background: none; color: var(--bad); text-decoration: underline wavy var(--bad); text-underline-offset: 4px; }
+
+  /* Claim and proof, set like a theorem environment */
+  .result { margin-top: 40px; display: grid; gap: 10px; }
+  .env-name { font-style: normal; font-weight: 600; margin-right: 0.45em; }
+  .claim { font-size: 1.3rem; font-style: italic; }
+  .claim .rel { font-style: normal; padding: 0 0.2em; }
+  .claim.eq .rel { color: var(--good); }
+  .claim.ne .rel { color: var(--bad); }
+  .proof .env-name { font-weight: 400; font-style: italic; }
+  .qed { float: right; margin-left: 1em; }
+  .witness { font: 500 0.95em var(--mono); background: var(--mark); padding: 1px 6px; border-radius: 2px; white-space: pre-wrap; word-break: break-all; }
+  .remark { color: var(--muted); }
+
+  /* Sections */
+  h2 { font-size: 1.3rem; font-weight: 600; margin: 56px 0 14px; }
+
+  /* Booktabs-style tables */
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+  table { border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+  thead th { font-weight: 400; font-style: italic; text-align: left; padding: 6px 18px 5px 0; border-bottom: 0.75px solid var(--ink); }
+  tbody td { padding: 5px 18px 5px 0; vertical-align: baseline; }
+  tbody tr:first-child td { padding-top: 9px; }
+  tbody tr:last-child td { padding-bottom: 9px; }
+  th:last-child, td:last-child { padding-right: 0; }
+  td.expr { font: 400 0.9rem var(--mono); white-space: nowrap; }
+  td.dim { color: var(--muted); }
+  td.act { text-align: right; }
+  .load {
+    font: 400 0.95rem var(--serif);
+    color: var(--accent);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-thickness: 0.5px;
+    text-underline-offset: 3px;
+  }
+  .load:hover { text-decoration-thickness: 1.5px; }
+  .caption { margin-top: 8px; font-size: 0.92rem; color: var(--muted); }
+  sup { font-size: 0.7em; line-height: 0; color: var(--accent); }
+
+  /* Footnotes */
+  .footnotes { margin-top: 56px; font-size: 0.88rem; color: var(--muted); display: grid; gap: 6px; }
+  .footnotes::before { content: ""; width: 30%; border-top: 0.75px solid var(--muted); margin-bottom: 6px; }
+  a { color: var(--accent); text-decoration-thickness: 0.5px; text-underline-offset: 2px; }
+
+  @media (max-width: 560px) {
+    body { padding-top: 36px; font-size: 17px; }
+    .prose { text-align: left; }
+    .examples td.dim, .examples th.dim { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+  <header>
+    <h1>Regular Expression Equivalence</h1>
+    <p class="subtitle">RegEq, with digits and ε</p>
+    <p class="opening prose">Enter two regular expressions <span class="math">R</span>₁ and <span class="math">R</span>₂. The checker decides whether they describe the same language and, if they don’t, gives the shortest string that separates them. Any character may be a letter, including digits, and <i>ε</i> denotes the empty string.</p>
+  </header>
+
+  <div class="givens">
+    <div class="row">
+      <label for="regex-1"><i>R</i>₁ =</label>
+      <input id="regex-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="(0|1)*0">
+      <button type="button" class="key" data-target="regex-1" aria-label="Insert ε into R₁" title="Insert ε">ε</button>
+      <div class="err" id="err-1" hidden></div>
+    </div>
+    <div class="row">
+      <label for="regex-2"><i>R</i>₂ =</label>
+      <input id="regex-2" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="(1*0)+">
+      <button type="button" class="key" data-target="regex-2" aria-label="Insert ε into R₂" title="Insert ε">ε</button>
+      <div class="err" id="err-2" hidden></div>
+    </div>
+  </div>
+
+  <section class="result" aria-live="polite">
+    <p class="claim" id="claim"></p>
+    <p class="proof prose" id="proof"></p>
+  </section>
+
+  <h2>Examples</h2>
+  <div class="table-wrap examples">
+    <table>
+      <thead><tr><th>R₁</th><th>R₂</th><th class="dim">Shows</th><th></th></tr></thead>
+      <tbody id="examples"></tbody>
+    </table>
+  </div>
+
+  <h2>Syntax</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Expression</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="expr">a | b</td><td>Union. Either side may be empty, so <code>a|</code> matches a or nothing.</td></tr>
+        <tr><td class="expr">a b</td><td>Concatenation.</td></tr>
+        <tr><td class="expr">a?</td><td>Zero or one copy of a.</td></tr>
+        <tr><td class="expr">a*</td><td>Zero or more copies.</td></tr>
+        <tr><td class="expr">a+</td><td>One or more copies.</td></tr>
+        <tr><td class="expr">a^N</td><td>Exactly <i>N</i> copies. Every digit right after <code>^</code> is part of <i>N</i>.</td></tr>
+        <tr><td class="expr">a^{N}<sup>†</sup></td><td>The same, but the braces end the count, so <code>1^{2}3</code> is 113.</td></tr>
+        <tr><td class="expr">( a )</td><td>Grouping. <code>()</code> is the empty string.</td></tr>
+        <tr><td class="expr">ε<sup>†</sup></td><td>The empty string. Write <code>\ε</code> for a literal ε.</td></tr>
+        <tr><td class="expr">0–9<sup>†</sup></td><td>Ordinary letters, except inside a count.</td></tr>
+        <tr><td class="expr">\x<sup>†</sup></td><td>The character x itself, as in <code>\*</code>, <code>\|</code>, or <code>\&nbsp;</code> for a space.</td></tr>
+        <tr><td class="expr">space</td><td>Ignored, except that it ends a count, so <code>1^2 3</code> is 113.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">Operators are listed from loosest to tightest binding. Both expressions are read over a single alphabet Σ: every letter that appears in either one.</p>
+
+  <footer class="footnotes">
+    <p><sup>†</sup> Not in the original RegEq.</p>
+    <p>Based on <a href="https://bakkot.github.io/dfa-lib/regeq.html">RegEq</a> by Kevin Gibbons, written for Stanford CS103.</p>
+  </footer>
+</main>
+
+<script>
+(() => {
+  // ---------- Parser ----------
+  const OPS = new Set(["|", "*", "+", "?", "(", ")", "^"]);
+
+  function tokenize(src) {
+    const chars = Array.from(src);
+    const toks = [];
+    let space = false;
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i];
+      if (/\s/.test(c)) { space = true; continue; }
+      if (c === "\\") {
+        if (i + 1 >= chars.length) throw { msg: "A backslash needs a character after it.", pos: i };
+        toks.push({ kind: "sym", v: chars[i + 1], pos: i, space });
+        i++;
+      } else if (c === "ε") {
+        toks.push({ kind: "eps", v: c, pos: i, space });
+      } else if (OPS.has(c)) {
+        toks.push({ kind: "op", v: c, pos: i, space });
+      } else {
+        toks.push({ kind: "sym", v: c, pos: i, space });
+      }
+      space = false;
+    }
+    return { toks, len: chars.length };
+  }
+
+  function parse(src) {
+    const { toks, len } = tokenize(src);
+    let i = 0;
+    const peek = () => toks[i];
+    const isOp = (t, v) => t && t.kind === "op" && t.v === v;
+    const isDigit = (t) => t && t.kind === "sym" && /^[0-9]$/.test(t.v);
+    const posOf = (t) => (t ? t.pos : len);
+
+    function union() {
+      const alts = [concat()];
+      while (isOp(peek(), "|")) { i++; alts.push(concat()); }
+      return alts.length === 1 ? alts[0] : { type: "alt", alts };
+    }
+    function concat() {
+      const items = [];
+      while (peek() && !isOp(peek(), "|") && !isOp(peek(), ")")) items.push(postfix());
+      if (items.length === 0) return { type: "eps" };
+      return items.length === 1 ? items[0] : { type: "cat", items };
+    }
+    function postfix() {
+      let node = atom();
+      for (;;) {
+        const t = peek();
+        if (isOp(t, "*")) { i++; node = { type: "star", a: node }; }
+        else if (isOp(t, "+")) { i++; node = { type: "plus", a: node }; }
+        else if (isOp(t, "?")) { i++; node = { type: "opt", a: node }; }
+        else if (isOp(t, "^")) { i++; node = { type: "rep", a: node, n: count(t) }; }
+        else return node;
+      }
+    }
+    function count(caret) {
+      let digits = "";
+      if (peek() && peek().kind === "sym" && peek().v === "{") {
+        i++;
+        while (isDigit(peek())) digits += toks[i++].v;
+        if (!(peek() && peek().kind === "sym" && peek().v === "}"))
+          throw { msg: "Expected a number and a closing } after ^{.", pos: posOf(peek()) };
+        i++;
+      } else {
+        if (isDigit(peek())) digits += toks[i++].v;
+        while (isDigit(peek()) && !peek().space) digits += toks[i++].v;
+      }
+      if (!digits) throw { msg: "^ must be followed by a count, like ^3 or ^{3}.", pos: posOf(peek()) };
+      const n = parseInt(digits, 10);
+      if (n > 5000) throw { msg: "Repeat counts above 5000 aren't supported.", pos: caret.pos };
+      return n;
+    }
+    function atom() {
+      const t = peek();
+      if (!t) throw { msg: "Expression ends where a letter or ( was expected.", pos: len };
+      if (isOp(t, "(")) {
+        i++;
+        const inner = union();
+        if (!isOp(peek(), ")")) throw { msg: "This ( is never closed.", pos: t.pos };
+        i++;
+        return inner;
+      }
+      if (t.kind === "sym") { i++; return { type: "sym", c: t.v }; }
+      if (t.kind === "eps") { i++; return { type: "eps" }; }
+      if (isOp(t, ")")) throw { msg: "This ) has no matching (.", pos: t.pos };
+      throw { msg: `“${t.v}” needs something before it to apply to.`, pos: t.pos };
+    }
+
+    const ast = union();
+    if (i < toks.length) {
+      const t = toks[i];
+      throw { msg: isOp(t, ")") ? "This ) has no matching (." : `Unexpected “${t.v}”.`, pos: t.pos };
+    }
+    return ast;
+  }
+
+  function symbols(node, out) {
+    switch (node.type) {
+      case "sym": out.add(node.c); break;
+      case "alt": node.alts.forEach((n) => symbols(n, out)); break;
+      case "cat": node.items.forEach((n) => symbols(n, out)); break;
+      case "star": case "plus": case "opt": case "rep": symbols(node.a, out); break;
+    }
+    return out;
+  }
+
+  // Approximate Thompson-NFA size, to refuse huge expressions before building them.
+  function size(node) {
+    switch (node.type) {
+      case "sym": case "eps": return 2;
+      case "alt": return 2 + node.alts.reduce((s, n) => s + size(n), 0);
+      case "cat": return node.items.reduce((s, n) => s + size(n), 0);
+      case "star": case "plus": case "opt": return 2 + size(node.a);
+      case "rep": return 2 + node.n * size(node.a);
+    }
+  }
+
+  // ---------- Thompson NFA ----------
+  function buildNFA(ast) {
+    if (size(ast) > 400000) throw { msg: "This expression is too large to check (too many repeats)." };
+    const eps = [], trans = [];
+    const add = () => { eps.push([]); trans.push([]); return eps.length - 1; };
+    function build(n) {
+      const s = add(), e = add();
+      switch (n.type) {
+        case "eps": eps[s].push(e); break;
+        case "sym": trans[s].push([n.c, e]); break;
+        case "alt":
+          for (const a of n.alts) { const f = build(a); eps[s].push(f.s); eps[f.e].push(e); }
+          break;
+        case "cat": {
+          let prev = s;
+          for (const a of n.items) { const f = build(a); eps[prev].push(f.s); prev = f.e; }
+          eps[prev].push(e);
+          break;
+        }
+        case "star": { const f = build(n.a); eps[s].push(f.s, e); eps[f.e].push(f.s, e); break; }
+        case "plus": { const f = build(n.a); eps[s].push(f.s); eps[f.e].push(f.s, e); break; }
+        case "opt":  { const f = build(n.a); eps[s].push(f.s, e); eps[f.e].push(e); break; }
+        case "rep": {
+          let prev = s;
+          for (let k = 0; k < n.n; k++) { const f = build(n.a); eps[prev].push(f.s); prev = f.e; }
+          eps[prev].push(e);
+          break;
+        }
+      }
+      return { s, e };
+    }
+    const { s, e } = build(ast);
+    return { eps, trans, start: s, final: e };
+  }
+
+  // Lazy subset construction: interns each reachable state set and caches its moves.
+  function lazyDFA(nfa) {
+    const ids = new Map(), sets = [], accepting = [], moves = [];
+    const mark = new Uint32Array(nfa.eps.length);
+    let stamp = 0;
+    function closure(seed) {
+      stamp++;
+      const stack = [], out = [];
+      for (const q of seed) if (mark[q] !== stamp) { mark[q] = stamp; stack.push(q); }
+      while (stack.length) {
+        const q = stack.pop();
+        out.push(q);
+        for (const r of nfa.eps[q]) if (mark[r] !== stamp) { mark[r] = stamp; stack.push(r); }
+      }
+      out.sort((a, b) => a - b);
+      return intern(out);
+    }
+    function intern(set) {
+      const key = set.join(",");
+      let id = ids.get(key);
+      if (id === undefined) {
+        id = sets.length;
+        ids.set(key, id);
+        sets.push(set);
+        accepting.push(set.includes(nfa.final));
+        moves.push(new Map());
+      }
+      return id;
+    }
+    function step(id, c) {
+      const cache = moves[id];
+      let to = cache.get(c);
+      if (to === undefined) {
+        const seed = [];
+        for (const q of sets[id]) for (const [a, r] of nfa.trans[q]) if (a === c) seed.push(r);
+        to = closure(seed);
+        cache.set(c, to);
+      }
+      return to;
+    }
+    return { start: closure([nfa.start]), step, accepts: (id) => accepting[id] };
+  }
+
+  // Breadth-first search of the product automaton: first hits are shortlex-minimal.
+  function compare(d1, d2, alphabet) {
+    const LIMIT = 250000;
+    const seen = new Map();
+    const nodes = [{ a: d1.start, b: d2.start, parent: -1, c: "" }];
+    seen.set(d1.start + ":" + d2.start, 0);
+    let only1 = null, only2 = null;
+    const word = (k) => { const w = []; while (k > 0) { w.push(nodes[k].c); k = nodes[k].parent; } return w.reverse(); };
+    for (let k = 0; k < nodes.length; k++) {
+      const { a, b } = nodes[k];
+      const x = d1.accepts(a), y = d2.accepts(b);
+      if (x && !y && !only1) only1 = word(k);
+      if (y && !x && !only2) only2 = word(k);
+      if (only1 && only2) break;
+      for (const c of alphabet) {
+        const na = d1.step(a, c), nb = d2.step(b, c);
+        const key = na + ":" + nb;
+        if (!seen.has(key)) {
+          if (nodes.length >= LIMIT) return { tooBig: true, explored: nodes.length };
+          seen.set(key, nodes.length);
+          nodes.push({ a: na, b: nb, parent: k, c });
+        }
+      }
+    }
+    return { only1, only2, explored: nodes.length };
+  }
+
+
+  // ---------- UI ----------
+  const $ = (id) => document.getElementById(id);
+  const inputs = [$("regex-1"), $("regex-2")];
+  const errs = [$("err-1"), $("err-2")];
+  const show = (c) => (c === " " ? "␣" : c);
+
+  const EXAMPLES = [
+    ["(0|1)*0", "(1*0)+", "strings ending in 0"],
+    ["(0|1)*", "0*1*", "a proper subset"],
+    ["(0|ε)1*", "0?1*", "ε inside a union"],
+    ["(01)*", "0(10)*1|", "an empty union branch"],
+    ["1^{2}3", "113", "braces ending a count"],
+    ["(0|1)^3", "000|001|010|011|100|101|110", "one missing string"],
+  ];
+  const exBody = $("examples");
+  for (const [a, b, what] of EXAMPLES) {
+    const tr = document.createElement("tr");
+    const cell = (text, cls) => { const td = document.createElement("td"); td.className = cls; td.textContent = text; tr.appendChild(td); return td; };
+    cell(a, "expr");
+    cell(b, "expr");
+    cell(what, "dim");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "load";
+    btn.textContent = "Load";
+    btn.setAttribute("aria-label", `Load ${a} and ${b}`);
+    btn.addEventListener("click", () => {
+      inputs[0].value = a;
+      inputs[1].value = b;
+      run();
+      window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    cell("", "act").appendChild(btn);
+    exBody.appendChild(tr);
+  }
+
+  document.querySelectorAll(".key").forEach((key) => {
+    key.addEventListener("click", () => {
+      const x = $(key.dataset.target);
+      const start = x.selectionStart ?? x.value.length, end = x.selectionEnd ?? x.value.length;
+      x.setRangeText("ε", start, end, "end");
+      x.focus();
+      run();
+    });
+  });
+
+  function showError(k, src, e) {
+    inputs[k].classList.add("invalid");
+    const box = errs[k];
+    box.replaceChildren(e.msg || String(e));
+    if (typeof e.pos === "number" && src.trim()) {
+      const chars = Array.from(src);
+      const pre = document.createElement("pre");
+      const m = document.createElement("mark");
+      m.textContent = e.pos < chars.length ? chars[e.pos] : " ";
+      pre.append(chars.slice(0, e.pos).join(""), m, chars.slice(e.pos + 1).join(""));
+      box.appendChild(pre);
+    }
+    box.hidden = false;
+  }
+
+  // ---- Typesetting helpers ----
+  const el = (tag, cls, ...kids) => { const n = document.createElement(tag); if (cls) n.className = cls; n.append(...kids); return n; };
+  const lang = (n) => el("span", "", el("i", "", "L"), "(", el("i", "", "R"), n === 1 ? "₁" : "₂", ")");
+  const envName = (name) => el("span", "env-name", name);
+  const qed = () => el("span", "qed", "∎");
+  function subject(w, capital) {
+    if (w.length === 0) return [capital ? "The empty string " : "the empty string ", el("i", "", "ε")];
+    return [capital ? "The string " : "the string ", el("span", "witness", w.map(show).join(""))];
+  }
+
+  function setClaim(cls, left, rel, right) {
+    const c = $("claim");
+    c.className = "claim " + cls;
+    c.hidden = false;
+    c.replaceChildren(envName("Claim."), lang(left), el("span", "rel", rel), lang(right), ".");
+  }
+  function setProof(...parts) {
+    const p = $("proof");
+    p.className = "proof prose";
+    p.replaceChildren(envName("Proof."), ...parts, qed());
+  }
+  function setRemark(text) {
+    $("claim").hidden = true;
+    const p = $("proof");
+    p.className = "remark prose";
+    p.replaceChildren(envName("Remark."), text);
+  }
+
+  function run() {
+    try {
+      localStorage.setItem("regeq-digits", JSON.stringify(inputs.map((x) => x.value)));
+    } catch (_) {}
+
+    const asts = inputs.map((input, k) => {
+      input.classList.remove("invalid");
+      errs[k].hidden = true;
+      try { return parse(input.value); }
+      catch (e) { showError(k, input.value, e); return null; }
+    });
+    if (!asts[0] || !asts[1]) {
+      const which = !asts[0] && !asts[1] ? "both expressions" : !asts[0] ? "R₁" : "R₂";
+      setRemark(`Fix the error in ${which} to see a result.`);
+      return;
+    }
+
+    const alphabet = [...symbols(asts[0], symbols(asts[1], new Set()))]
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+    let result;
+    try {
+      const d = asts.map((a) => lazyDFA(buildNFA(a)));
+      result = compare(d[0], d[1], alphabet);
+    } catch (e) {
+      setRemark(e.msg || String(e));
+      return;
+    }
+    if (result.tooBig) {
+      setRemark("These expressions are too large to check: the combined automaton passes 250,000 states. Try smaller repeat counts.");
+      return;
+    }
+
+    const sigma = alphabet.length ? `Σ = {${alphabet.map(show).join(", ")}}` : "Σ = ∅";
+    const pairs = result.explored.toLocaleString();
+    const { only1, only2 } = result;
+
+    if (!only1 && !only2) {
+      setClaim("eq", 1, "=", 2);
+      setProof(`Over ${sigma}, a breadth-first search of the product automaton reaches ${pairs} state ${result.explored === 1 ? "pair" : "pairs"}, and in none of them does exactly one expression accept.`);
+    } else if (only1 && only2) {
+      setClaim("ne", 1, "≠", 2);
+      setProof(
+        ...subject(only1, true), " is in ", lang(1), " but not in ", lang(2), ", and ",
+        ...subject(only2, false), " is in ", lang(2), " but not in ", lang(1),
+        `. Both are the shortest such strings over ${sigma}.`
+      );
+    } else {
+      const [big, small, w] = only1 ? [1, 2, only1] : [2, 1, only2];
+      setClaim("ne", small, "⊊", big);
+      setProof(
+        "Every string in ", lang(small), " is also in ", lang(big), ", but ",
+        ...subject(w, false), " is in ", lang(big), " and not in ", lang(small),
+        `. It is the shortest such string over ${sigma}.`
+      );
+    }
+  }
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem("regeq-digits")); } catch (_) {}
+  const initial = Array.isArray(saved) && saved.length === 2 && (saved[0] || saved[1]) ? saved : EXAMPLES[1];
+  inputs[0].value = initial[0];
+  inputs[1].value = initial[1];
+  inputs.forEach((x) => x.addEventListener("input", run));
+  run();
+})();
+</script>
+</body>
+</html>
