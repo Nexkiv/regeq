@@ -157,26 +157,30 @@ export function parse(src: string): Node {
   return ast;
 }
 
-/** Explicit alphabet: every character except spaces, commas and braces is a letter. */
+/**
+ * The Σ box: letters separated by spaces or commas, optionally in braces. Any other character,
+ * operators included, is a letter; escapes work as in expressions.
+ */
 export function parseSigma(src: string): Set<string> {
-  const chars = Array.from(src);
+  const { toks } = tokenize(src);
+  const isSeparator = (t: Token | undefined) =>
+    !!t && !t.escaped && (t.v === "," || t.v === "{" || t.v === "}");
   const out = new Set<string>();
-  for (let i = 0; i < chars.length; i++) {
-    const c = chars[i];
-    if (/\s/.test(c) || c === "," || c === "{" || c === "}") continue;
-    if (c === "\\") {
-      if (i + 1 >= chars.length)
-        throw new RegexSyntaxError("A backslash needs a character after it.", i);
-      out.add(chars[++i]);
-    } else if (c === "ε" || c === "Σ") {
+  toks.forEach((t, k) => {
+    if (t.kind === "eps" || t.kind === "any")
       throw new RegexSyntaxError(
-        `${c} can't be a letter here. Write \\${c} for a literal ${c}.`,
-        i,
+        `${t.v} can't be a letter here. Write \\${t.v} for a literal ${t.v}.`,
+        t.pos,
       );
-    } else {
-      out.add(c);
-    }
-  }
+    if (isSeparator(t)) return;
+    const [prev, next] = [toks[k - 1], toks[k + 1]];
+    if (t.v === "-" && !t.escaped && prev && next && !isSeparator(prev) && !isSeparator(next))
+      throw new RegexSyntaxError(
+        "Ranges aren't supported. List each letter, or write \\- for a dash.",
+        t.pos,
+      );
+    out.add(t.v);
+  });
   return out;
 }
 

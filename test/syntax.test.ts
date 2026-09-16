@@ -88,6 +88,26 @@ describe("parseSigma", () => {
     expect([...parseSigma("{0, 1 2,\\,}")]).toEqual(["0", "1", "2", ","]);
   });
 
+  it("treats operators and escaped symbols as letters", () => {
+    expect([...parseSigma("(, |, *, \\ε, \\Σ, \\ ")]).toEqual(["(", "|", "*", "ε", "Σ", " "]);
+  });
+
+  it("allows a dash as a letter when it isn't a range", () => {
+    expect([...parseSigma("0, -, 1")]).toEqual(["0", "-", "1"]);
+    expect([...parseSigma("a\\-z")]).toEqual(["a", "-", "z"]);
+    expect([...parseSigma("-a, b-")]).toEqual(["-", "a", "b"]);
+  });
+
+  it.each([
+    ["a-z", 1],
+    ["0 - 9", 2],
+  ])("rejects the range %s", (src, pos) => {
+    expect(syntaxError(() => parseSigma(src))).toEqual({
+      message: "Ranges aren't supported. List each letter, or write \\- for a dash.",
+      pos,
+    });
+  });
+
   it.each([
     ["ε", "ε can't be a letter here. Write \\ε for a literal ε.", 0],
     ["0, Σ", "Σ can't be a letter here. Write \\Σ for a literal Σ.", 3],
