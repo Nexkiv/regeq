@@ -83,7 +83,6 @@
     border-radius: 2px 2px 0 0;
     padding: 9px 10px 7px;
   }
-  .row input::placeholder { color: var(--muted); opacity: 0.7; }
   .row input:focus { outline: none; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
   .row input.invalid { border-bottom-color: var(--bad); }
   .key {
@@ -168,13 +167,13 @@
   <div class="givens">
     <div class="row">
       <label for="regex-1"><i>R</i>₁ =</label>
-      <input id="regex-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="(0|1)*0">
+      <input id="regex-1" autocomplete="off" autocapitalize="off" spellcheck="false">
       <button type="button" class="key" data-target="regex-1" aria-label="Insert ε into R₁" title="Insert ε">ε</button>
       <div class="err" id="err-1" hidden></div>
     </div>
     <div class="row">
       <label for="regex-2"><i>R</i>₂ =</label>
-      <input id="regex-2" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="(1*0)+">
+      <input id="regex-2" autocomplete="off" autocapitalize="off" spellcheck="false">
       <button type="button" class="key" data-target="regex-2" aria-label="Insert ε into R₂" title="Insert ε">ε</button>
       <div class="err" id="err-2" hidden></div>
     </div>
@@ -537,9 +536,11 @@
   }
 
   function run() {
-    try {
-      localStorage.setItem("regeq-digits", JSON.stringify(inputs.map((x) => x.value)));
-    } catch (_) {}
+    if (inputs.every((x) => !x.value.trim())) {
+      inputs.forEach((x, k) => { x.classList.remove("invalid"); errs[k].hidden = true; });
+      setRemark("Enter two expressions to compare them, or load one of the examples below.");
+      return;
+    }
 
     const asts = inputs.map((input, k) => {
       input.classList.remove("invalid");
@@ -594,11 +595,6 @@
     }
   }
 
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem("regeq-digits")); } catch (_) {}
-  const initial = Array.isArray(saved) && saved.length === 2 && (saved[0] || saved[1]) ? saved : EXAMPLES[1];
-  inputs[0].value = initial[0];
-  inputs[1].value = initial[1];
   inputs.forEach((x) => x.addEventListener("input", run));
   run();
 })();
