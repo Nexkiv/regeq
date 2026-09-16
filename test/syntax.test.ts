@@ -44,6 +44,16 @@ describe("parse", () => {
     expect(parse("a^2 3")).toMatchObject({ type: "cat", items: [{ n: 2 }, { c: "3" }] });
   });
 
+  it.each([
+    ["1^{1 2}", "Spaces aren't allowed inside a count.", 5],
+    ["1^{ 12}", "Spaces aren't allowed inside a count.", 4],
+    ["1^{12 }", "Spaces aren't allowed inside a count.", 6],
+    ["1^ 12", "Put the count right after ^.", 3],
+    ["1^ {2}", "Put the count right after ^.", 3],
+  ])("rejects the spaced count %s", (src, message, pos) => {
+    expect(syntaxError(() => parse(src))).toEqual({ message, pos });
+  });
+
   it("never reads an escaped character as part of a count", () => {
     expect(parse("1^2\\3")).toMatchObject({ type: "cat", items: [{ n: 2 }, { c: "3" }] });
     expect(syntaxError(() => parse("1^\\1"))).toEqual({
