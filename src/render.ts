@@ -1,6 +1,5 @@
-// Turns results into DOM, typeset like a textbook claim and proof.
-
-export const show = (c: string) => (c === " " ? "␣" : c);
+// Turns check results into DOM, typeset like a textbook claim and proof.
+import { visible, type CheckResult } from "./engine/check";
 
 export function el(tag: string, cls: string, ...kids: (Node | string)[]): HTMLElement {
   const n = document.createElement(tag);
@@ -12,25 +11,25 @@ export function el(tag: string, cls: string, ...kids: (Node | string)[]): HTMLEl
 const $ = (id: string) => document.getElementById(id)!;
 
 /** L(Rₙ) with italic variables. */
-export const lang = (n: 1 | 2) =>
+const lang = (n: 1 | 2) =>
   el("span", "", el("i", "", "L"), "(", el("i", "", "R"), n === 1 ? "₁" : "₂", ")");
 
 const envName = (name: string) => el("span", "env-name", name);
 
-export function subject(w: string[], capital: boolean): (Node | string)[] {
-  if (w.length === 0)
-    return [capital ? "The empty string " : "the empty string ", el("i", "", "ε")];
-  return [capital ? "The string " : "the string ", el("span", "witness", w.map(show).join(""))];
+function subject(w: string[], capital: boolean): (Node | string)[] {
+  const the = capital ? "The" : "the";
+  if (w.length === 0) return [`${the} empty string `, el("i", "", "ε")];
+  return [`${the} string `, el("span", "witness", w.map(visible).join(""))];
 }
 
-export function setClaim(cls: string, left: 1 | 2, rel: string, right: 1 | 2) {
+function setClaim(cls: string, left: 1 | 2, rel: string, right: 1 | 2) {
   const c = $("claim");
   c.className = "claim " + cls;
   c.hidden = false;
   c.replaceChildren(envName("Claim."), lang(left), el("span", "rel", rel), lang(right), ".");
 }
 
-export function setProof(...parts: (Node | string)[]) {
+function setProof(...parts: (Node | string)[]) {
   const p = $("proof");
   p.className = "proof";
   p.replaceChildren(envName("Proof."), ...parts, el("span", "qed", "∎"));
@@ -43,6 +42,59 @@ export function setRemark(text: string) {
   p.replaceChildren(text);
 }
 
+export function renderResult(result: CheckResult) {
+  if ("message" in result) {
+    setRemark(result.message);
+    return;
+  }
+  const { alphabet, explored } = result;
+  const sigma = alphabet.length ? `Σ = {${alphabet.map(visible).join(", ")}}` : "Σ = ∅";
+
+  if (result.status === "equal") {
+    setClaim("eq", 1, "=", 2);
+    setProof(
+      `Over ${sigma}, a breadth-first search of the product automaton reaches ${explored.toLocaleString()} state ${explored === 1 ? "pair" : "pairs"}, and in none of them does exactly one expression accept.`,
+    );
+    return;
+  }
+
+  const { only1, only2 } = result;
+  if (only1 && only2) {
+    setClaim("ne", 1, "≠", 2);
+    setProof(
+      ...subject(only1, true),
+      " is in ",
+      lang(1),
+      " but not in ",
+      lang(2),
+      ", and ",
+      ...subject(only2, false),
+      " is in ",
+      lang(2),
+      " but not in ",
+      lang(1),
+      `. Both are the shortest such strings over ${sigma}.`,
+    );
+    return;
+  }
+
+  const [big, small, w] = only1 ? ([1, 2, only1] as const) : ([2, 1, only2!] as const);
+  setClaim("ne", small, "⊊", big);
+  setProof(
+    "Every string in ",
+    lang(small),
+    " is also in ",
+    lang(big),
+    ", but ",
+    ...subject(w, false),
+    " is in ",
+    lang(big),
+    " and not in ",
+    lang(small),
+    `. It is the shortest such string over ${sigma}.`,
+  );
+}
+
 export function clearError(input: HTMLInputElement, box: HTMLElement) {
   input.classList.remove("invalid");
   box.hidden = true;
@@ -52,18 +104,15 @@ export function clearError(input: HTMLInputElement, box: HTMLElement) {
 export function showError(
   input: HTMLInputElement,
   box: HTMLElement,
-  e: { msg?: string; pos?: number },
+  message: string,
+  pos?: number,
 ) {
   input.classList.add("invalid");
-  box.replaceChildren(e.msg || String(e));
-  const src = input.value;
-  if (typeof e.pos === "number" && src.trim()) {
-    const chars = Array.from(src);
-    const pre = document.createElement("pre");
-    const m = document.createElement("mark");
-    m.textContent = e.pos < chars.length ? chars[e.pos] : " ";
-    pre.append(chars.slice(0, e.pos).join(""), m, chars.slice(e.pos + 1).join(""));
-    box.appendChild(pre);
+  box.replaceChildren(message);
+  if (pos !== undefined) {
+    const chars = Array.from(input.value);
+    const mark = el("mark", "", chars[pos] ?? " ");
+    box.append(el("pre", "", chars.slice(0, pos).join(""), mark, chars.slice(pos + 1).join("")));
   }
   box.hidden = false;
 }

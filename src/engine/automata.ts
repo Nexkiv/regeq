@@ -1,5 +1,8 @@
 // Thompson NFA construction, lazy subset construction, and the product-automaton search.
-import type { Node } from "./syntax";
+import { assertNever, type Node } from "./syntax";
+
+export const MAX_NFA_COST = 400_000;
+export const MAX_STATE_PAIRS = 250_000;
 
 export type NFA = { eps: number[][]; trans: [string, number][][]; start: number; final: number };
 export type DFA = {
@@ -7,34 +10,41 @@ export type DFA = {
   step: (id: number, c: string) => number;
   accepts: (id: number) => boolean;
 };
-export type SearchResult =
-  | { tooBig: true; explored: number }
-  | { tooBig?: false; only1: string[] | null; only2: string[] | null; explored: number };
+export type Search = {
+  only1: string[] | null;
+  only2: string[] | null;
+  explored: number;
+  /** True when the search stopped at the state-pair limit. */
+  cutOff: boolean;
+};
 
-/** Approximate Thompson-NFA size, to refuse huge expressions before building them. */
-export function size(node: Node): number {
-  switch (node.type) {
-    case "sym":
-    case "eps":
-    case "any":
-      return 2;
-    case "alt":
-      return 2 + node.alts.reduce((s, n) => s + size(n), 0);
-    case "cat":
-      return node.items.reduce((s, n) => s + size(n), 0);
-    case "star":
-    case "plus":
-    case "opt":
-      return 2 + size(node.a);
-    case "rep":
-      return 2 + node.n * size(node.a);
-  }
+/** Rough size of the NFA buildNFA would produce, so huge expressions are refused up front. */
+export function nfaCost(node: Node): number {
+  const cost = (n: Node): number => {
+    switch (n.type) {
+      case "sym":
+      case "eps":
+      case "any":
+        return 2;
+      case "alt":
+        return 2 + n.alts.reduce((s, a) => s + cost(a), 0);
+      case "cat":
+        return n.items.reduce((s, a) => s + cost(a), 0);
+      case "star":
+      case "plus":
+      case "opt":
+        return 2 + cost(n.a);
+      case "rep":
+        return 2 + n.n * cost(n.a);
+      default:
+        return assertNever(n);
+    }
+  };
+  return cost(node);
 }
 
-/** "any" (Σ) becomes one transition per letter of the shared alphabet. */
+/** Thompson construction. Σ ("any") becomes one transition per letter of the alphabet. */
 export function buildNFA(ast: Node, alphabet: string[]): NFA {
-  if (size(ast) > 400000)
-    throw { msg: "This expression is too large to check (too many repeats)." };
   const eps: number[][] = [];
   const trans: [string, number][][] = [];
   const add = () => {
@@ -62,9 +72,11 @@ export function buildNFA(ast: Node, alphabet: string[]): NFA {
           eps[f.e].push(e);
         }
         break;
-      case "cat": {
+      case "cat":
+      case "rep": {
+        const parts = n.type === "cat" ? n.items : Array<Node>(n.n).fill(n.a);
         let prev = s;
-        for (const a of n.items) {
+        for (const a of parts) {
           const f = build(a);
           eps[prev].push(f.s);
           prev = f.e;
@@ -90,16 +102,8 @@ export function buildNFA(ast: Node, alphabet: string[]): NFA {
         eps[f.e].push(e);
         break;
       }
-      case "rep": {
-        let prev = s;
-        for (let k = 0; k < n.n; k++) {
-          const f = build(n.a);
-          eps[prev].push(f.s);
-          prev = f.e;
-        }
-        eps[prev].push(e);
-        break;
-      }
+      default:
+        assertNever(n);
     }
     return { s, e };
   }
@@ -162,20 +166,23 @@ export function lazyDFA(nfa: NFA): DFA {
   return { start: closure([nfa.start]), step, accepts: (id) => accepting[id] };
 }
 
-/** Breadth-first search of the product automaton: first hits are shortlex-minimal. */
-export function compare(d1: DFA, d2: DFA, alphabet: string[]): SearchResult {
-  const LIMIT = 250000;
-  const seen = new Map<string, number>();
+/**
+ * Breadth-first search of the product automaton for strings accepted by exactly one side.
+ * With a sorted alphabet the first hits are the shortest, alphabetically first such strings.
+ */
+export function findDistinguishingWords(
+  d1: DFA,
+  d2: DFA,
+  alphabet: string[],
+  limit = MAX_STATE_PAIRS,
+): Search {
+  const seen = new Set([d1.start + ":" + d2.start]);
   const nodes = [{ a: d1.start, b: d2.start, parent: -1, c: "" }];
-  seen.set(d1.start + ":" + d2.start, 0);
   let only1: string[] | null = null;
   let only2: string[] | null = null;
   const word = (k: number) => {
     const w: string[] = [];
-    while (k > 0) {
-      w.push(nodes[k].c);
-      k = nodes[k].parent;
-    }
+    for (; k > 0; k = nodes[k].parent) w.push(nodes[k].c);
     return w.reverse();
   };
   for (let k = 0; k < nodes.length; k++) {
@@ -189,12 +196,11 @@ export function compare(d1: DFA, d2: DFA, alphabet: string[]): SearchResult {
       const na = d1.step(a, c);
       const nb = d2.step(b, c);
       const key = na + ":" + nb;
-      if (!seen.has(key)) {
-        if (nodes.length >= LIMIT) return { tooBig: true, explored: nodes.length };
-        seen.set(key, nodes.length);
-        nodes.push({ a: na, b: nb, parent: k, c });
-      }
+      if (seen.has(key)) continue;
+      if (nodes.length >= limit) return { only1, only2, explored: nodes.length, cutOff: true };
+      seen.add(key);
+      nodes.push({ a: na, b: nb, parent: k, c });
     }
   }
-  return { only1, only2, explored: nodes.length };
+  return { only1, only2, explored: nodes.length, cutOff: false };
 }

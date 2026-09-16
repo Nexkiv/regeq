@@ -1,0 +1,140 @@
+import { describe, expect, it } from "vitest";
+import { buildNFA, lazyDFA, nfaCost } from "../src/engine/automata";
+import { check } from "../src/engine/check";
+import { parse } from "../src/engine/syntax";
+import { EXAMPLES } from "../src/examples";
+import { compare } from "./helpers";
+
+describe("equivalence", () => {
+  it.each([
+    ["(0|1)*0", "(1*0)+"],
+    ["(0|ε)1*", "0?1*"],
+    ["Σ*1Σ*", "0*1(0|1)*"],
+    ["1^{2}3", "113"],
+    ["1^2 3", "113"],
+    ["(01)*", "0(10)*1|"],
+    ["()", "ε"],
+    ["a|", "a?"],
+    ["Σ^2", "(0|1)(0|1)"],
+    ["\\*\\|", "(\\*)(\\|)"],
+    ["a^0b", "b"],
+  ])("%s = %s", (r1, r2) => {
+    expect(compare(r1, r2)).toMatchObject({ status: "equal" });
+  });
+
+  it("finds a shortest witness on each side", () => {
+    expect(compare("0*", "1*")).toMatchObject({ status: "differ", only1: "0", only2: "1" });
+  });
+
+  it("reports a proper subset in either direction", () => {
+    expect(compare("(0|1)*", "0*1*")).toMatchObject({ only1: "10", only2: null });
+    expect(compare("0*1*", "(0|1)*")).toMatchObject({ only1: null, only2: "10" });
+  });
+
+  it("picks the alphabetically first witness among the shortest", () => {
+    expect(compare("(0|1)^3", "000|001|010|011|100|101|110")).toMatchObject({ only1: "111" });
+    expect(compare("(a|b)(a|b)", "bb")).toMatchObject({ only1: "aa" });
+  });
+
+  it("uses ε as a witness", () => {
+    expect(compare("0*", "0+")).toMatchObject({ only1: "", only2: null });
+  });
+
+  it("counts explored state pairs", () => {
+    expect(check("0", "0", "")).toMatchObject({ status: "equal", explored: 3 });
+  });
+});
+
+describe("alphabet", () => {
+  it("is inferred from both expressions when Σ is empty", () => {
+    expect(compare("Σ*", "0*")).toMatchObject({ status: "equal", alphabet: ["0"] });
+    expect(compare("b", "a|c")).toMatchObject({ alphabet: ["a", "b", "c"] });
+  });
+
+  it("comes from the Σ box when given", () => {
+    expect(compare("Σ*", "0*", "0, 1")).toMatchObject({ only1: "1", alphabet: ["0", "1"] });
+    expect(compare("Σ", "0|1|2", "{0 1 2}")).toMatchObject({ status: "equal" });
+  });
+
+  it("rejects letters that are not in Σ", () => {
+    expect(check("0(1|2)3", "0", "0, 1")).toEqual({
+      status: "invalid",
+      message: "Fix the error in R₁ to see a result.",
+      errors: [
+        {
+          field: "r1",
+          message: "“2” isn't in Σ. Add it to Σ, or clear Σ to use the letters in the expressions.",
+          pos: 4,
+        },
+      ],
+    });
+  });
+
+  it("reports Σ-box errors", () => {
+    expect(check("0", "0", "ε")).toMatchObject({
+      status: "invalid",
+      message: "Fix the error in Σ to see a result.",
+      errors: [{ field: "sigma", pos: 0 }],
+    });
+  });
+});
+
+describe("prompts and errors", () => {
+  it("asks for input when both boxes are empty", () => {
+    expect(check("", "  ", "")).toEqual({
+      status: "prompt",
+      message: "Enter two regular expressions to compare them.",
+      errors: [],
+    });
+  });
+
+  it("names the expressions that have errors", () => {
+    expect(check("(", "0", "")).toMatchObject({
+      message: "Fix the error in R₁ to see a result.",
+    });
+    expect(check("0", ")", "")).toMatchObject({
+      message: "Fix the error in R₂ to see a result.",
+      errors: [{ field: "r2", message: "This ) has no matching (.", pos: 0 }],
+    });
+    expect(check("(", ")", "")).toMatchObject({
+      message: "Fix the error in both expressions to see a result.",
+    });
+  });
+
+  it("refuses expressions that are too large to build", () => {
+    expect(check("(a^5000)^5000", "a", "")).toEqual({
+      status: "tooBig",
+      message: "This expression is too large to check (too many repeats).",
+      errors: [],
+    });
+  });
+
+  it("gives up past the state-pair limit", () => {
+    expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5|2", "", 20)).toMatchObject({
+      status: "tooBig",
+      message:
+        "These expressions are too large to check: the combined automaton passes 20 states. Try smaller repeat counts.",
+    });
+  });
+});
+
+describe("automata", () => {
+  it("estimates NFA size", () => {
+    expect(nfaCost(parse("a"))).toBe(2);
+    expect(nfaCost(parse("(ab|c)*"))).toBe(2 + 2 + 4 + 2);
+    expect(nfaCost(parse("a^3"))).toBe(2 + 3 * 2);
+  });
+
+  it("builds an automaton that accepts the right strings", () => {
+    const dfa = lazyDFA(buildNFA(parse("(ab)+|Σ"), ["a", "b"]));
+    const accepts = (w: string) => dfa.accepts([...w].reduce(dfa.step, dfa.start));
+    expect(["a", "b", "ab", "abab"].map(accepts)).toEqual([true, true, true, true]);
+    expect(["", "aa", "aba", "ba"].map(accepts)).toEqual([false, false, false, false]);
+  });
+});
+
+describe("examples", () => {
+  it.each(EXAMPLES)("$r1 vs $r2 is $expected", ({ r1, r2, sigma, expected }) => {
+    expect(check(r1, r2, sigma).status).toBe(expected);
+  });
+});
