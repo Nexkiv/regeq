@@ -109,6 +109,11 @@ describe("prompts and errors", () => {
     });
   });
 
+  it("counts Σ's width when refusing large expressions", () => {
+    const sigma = Array.from({ length: 50 }, (_, k) => String.fromCharCode(0x100 + k)).join(",");
+    expect(check("(Σ^100)^100", "Ā", sigma)).toMatchObject({ status: "tooBig" });
+  });
+
   it("gives up past the state-pair limit", () => {
     expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5|2", "", 20)).toMatchObject({
       status: "tooBig",
@@ -120,9 +125,14 @@ describe("prompts and errors", () => {
 
 describe("automata", () => {
   it("estimates NFA size", () => {
-    expect(nfaCost(parse("a"))).toBe(2);
-    expect(nfaCost(parse("(ab|c)*"))).toBe(2 + 2 + 4 + 2);
-    expect(nfaCost(parse("a^3"))).toBe(2 + 3 * 2);
+    expect(nfaCost(parse("a"), 1)).toBe(2);
+    expect(nfaCost(parse("(ab|c)*"), 3)).toBe(2 + 2 + 4 + 2);
+    expect(nfaCost(parse("a^3"), 1)).toBe(2 + 3 * 2);
+  });
+
+  it("counts Σ as one transition per letter", () => {
+    expect(nfaCost(parse("Σ"), 50)).toBe(52);
+    expect(nfaCost(parse("Σ*"), 0)).toBe(4);
   });
 
   it("builds an automaton that accepts the right strings", () => {

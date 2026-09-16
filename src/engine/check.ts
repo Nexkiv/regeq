@@ -84,7 +84,7 @@ export function check(
     ...(given ?? new Set([...letters(ast1), ...letters(ast2)].map((n) => n.c))),
   ].sort();
 
-  if (nfaCost(ast1) > MAX_NFA_COST || nfaCost(ast2) > MAX_NFA_COST)
+  if ([ast1, ast2].some((ast) => nfaCost(ast, alphabet.length) > MAX_NFA_COST))
     return {
       status: "tooBig",
       message: "This expression is too large to check (too many repeats).",

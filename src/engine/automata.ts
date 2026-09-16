@@ -18,14 +18,18 @@ export type Search = {
   cutOff: boolean;
 };
 
-/** Rough size of the NFA buildNFA would produce, so huge expressions are refused up front. */
-export function nfaCost(node: Node): number {
+/**
+ * Rough size (states plus Σ transitions) of the NFA buildNFA would produce, so huge
+ * expressions are refused before they are built.
+ */
+export function nfaCost(node: Node, alphabetSize: number): number {
   const cost = (n: Node): number => {
     switch (n.type) {
       case "sym":
       case "eps":
-      case "any":
         return 2;
+      case "any":
+        return 2 + alphabetSize;
       case "alt":
         return 2 + n.alts.reduce((s, a) => s + cost(a), 0);
       case "cat":
