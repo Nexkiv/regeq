@@ -154,6 +154,14 @@ describe("prompts and errors", () => {
     expect(check("(Σ^100)^100", "Ā", sigma)).toMatchObject({ status: "tooBig" });
   });
 
+  it("handles very long operator chains", () => {
+    expect(check("a" + "*".repeat(100_000), "a*", "")).toMatchObject({ status: "equal" });
+    expect(check("a" + "^1*".repeat(2000), "a*", "")).toMatchObject({
+      status: "invalid",
+      errors: [{ field: "r1", message: "This expression is nested too deeply." }],
+    });
+  });
+
   it("gives up past the state-pair limit", () => {
     expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5|2", "", 20)).toMatchObject({
       status: "tooBig",

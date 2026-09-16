@@ -22,11 +22,15 @@ export type Node =
   | { type: "rep"; a: Node; n: number };
 
 export const MAX_REPEAT = 5000;
+/** Deepest allowed parenthesis nesting; keeps the recursive parser well within the stack. */
+export const MAX_PARENS = 500;
+/** Deepest allowed expression tree; keeps the recursive automaton builders within the stack. */
+export const MAX_HEIGHT = 1000;
 
-/** A problem in what the user typed; `pos` is a code-point index into the input. */
+/** A problem in what the user typed; `pos` is a code-point index into the input, if known. */
 export class RegexSyntaxError extends Error {
-  readonly pos: number;
-  constructor(message: string, pos: number) {
+  readonly pos: number | undefined;
+  constructor(message: string, pos?: number) {
     super(message);
     this.name = "RegexSyntaxError";
     this.pos = pos;
@@ -69,6 +73,7 @@ export function tokenize(src: string): { toks: Token[]; len: number } {
 export function parse(src: string): Node {
   const { toks, len } = tokenize(src);
   let i = 0;
+  let parens = 0;
   const peek = (): Token | undefined => toks[i];
   const isOp = (t: Token | undefined, v: string) => t?.kind === "op" && t.v === v;
   // Count syntax (digits and braces after ^) only uses unescaped characters.
@@ -93,19 +98,24 @@ export function parse(src: string): Node {
     return items.length === 1 ? items[0] : { type: "cat", items };
   }
 
+  const UNARY = { "*": "star", "+": "plus", "?": "opt" } as const;
+
+  // Repeated postfix operators collapse exactly: a** is a*, a+? is a*, (a^2)^3 is a^6.
   function postfix(): Node {
     let node = atom();
     for (;;) {
       const t = peek();
-      if (isOp(t, "*")) node = { type: "star", a: node };
-      else if (isOp(t, "+")) node = { type: "plus", a: node };
-      else if (isOp(t, "?")) node = { type: "opt", a: node };
-      else if (t && isOp(t, "^")) {
-        i++;
-        node = { type: "rep", a: node, n: count(t) };
-        continue;
-      } else return node;
+      if (t?.kind !== "op" || !(t.v in UNARY || t.v === "^")) return node;
       i++;
+      if (t.v === "^") {
+        const n = count(t);
+        node = node.type === "rep" ? { ...node, n: node.n * n } : { type: "rep", a: node, n };
+      } else {
+        const type = UNARY[t.v as keyof typeof UNARY];
+        if (node.type === "star" || node.type === "plus" || node.type === "opt")
+          node = { type: node.type === type ? type : "star", a: node.a };
+        else node = { type, a: node };
+      }
     }
   }
 
@@ -140,7 +150,10 @@ export function parse(src: string): Node {
     const t = peek()!;
     i++;
     if (isOp(t, "(")) {
+      if (++parens > MAX_PARENS)
+        throw new RegexSyntaxError("Parentheses are nested too deeply.", t.pos);
       const inner = union();
+      parens--;
       if (!isOp(peek(), ")")) throw new RegexSyntaxError("This ( is never closed.", t.pos);
       i++;
       return inner;
@@ -154,6 +167,7 @@ export function parse(src: string): Node {
   const ast = union();
   // union() stops only at the end or at a ) with no matching (.
   if (i < toks.length) throw new RegexSyntaxError("This ) has no matching (.", toks[i].pos);
+  if (height(ast) > MAX_HEIGHT) throw new RegexSyntaxError("This expression is nested too deeply.");
   return ast;
 }
 
@@ -184,29 +198,46 @@ export function parseSigma(src: string): Set<string> {
   return out;
 }
 
-/** Every node of the expression, parents before children, in source order. */
-export function* walk(node: Node): Generator<Node> {
-  yield node;
+function children(node: Node): Node[] {
   switch (node.type) {
     case "sym":
     case "eps":
     case "any":
-      return;
+      return [];
     case "alt":
-      for (const n of node.alts) yield* walk(n);
-      return;
+      return node.alts;
     case "cat":
-      for (const n of node.items) yield* walk(n);
-      return;
+      return node.items;
     case "star":
     case "plus":
     case "opt":
     case "rep":
-      yield* walk(node.a);
-      return;
+      return [node.a];
     default:
-      assertNever(node);
+      return assertNever(node);
   }
+}
+
+/** Every node of the expression, parents before children, in source order. */
+export function* walk(root: Node): Generator<Node> {
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop()!;
+    yield node;
+    stack.push(...[...children(node)].reverse());
+  }
+}
+
+/** Number of nodes on the longest root-to-leaf path (computed without recursion). */
+function height(root: Node): number {
+  let max = 0;
+  const stack: [Node, number][] = [[root, 1]];
+  while (stack.length) {
+    const [node, depth] = stack.pop()!;
+    max = Math.max(max, depth);
+    for (const child of children(node)) stack.push([child, depth + 1]);
+  }
+  return max;
 }
 
 /** Every letter node of the expression, in source order. */

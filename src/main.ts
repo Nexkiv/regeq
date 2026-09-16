@@ -26,7 +26,8 @@ function run() {
   try {
     result = check(fields.r1.input.value, fields.r2.input.value, fields.sigma.input.value);
   } catch (e) {
-    setRemark(String(e));
+    console.error(e);
+    setRemark("Something went wrong checking these expressions.");
     return;
   }
   for (const { field, message, pos } of result.errors)

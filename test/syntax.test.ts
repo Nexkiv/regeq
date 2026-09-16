@@ -54,6 +54,30 @@ describe("parse", () => {
     expect(syntaxError(() => parse(src))).toEqual({ message, pos });
   });
 
+  it("collapses chains of postfix operators", () => {
+    const a = { type: "sym", c: "a", pos: 0 };
+    expect(parse("a**")).toEqual({ type: "star", a });
+    expect(parse("a++")).toEqual({ type: "plus", a });
+    expect(parse("a??")).toEqual({ type: "opt", a });
+    expect(parse("a+?")).toEqual({ type: "star", a });
+    expect(parse("a?+")).toEqual({ type: "star", a });
+    expect(parse("a^2^3")).toEqual({ type: "rep", a, n: 6 });
+    expect(parse("a" + "*".repeat(100_000))).toEqual({ type: "star", a });
+  });
+
+  it("limits nesting", () => {
+    const nested = (k: number) => "(".repeat(k) + "a" + ")".repeat(k);
+    expect(parse(nested(500))).toEqual({ type: "sym", c: "a", pos: 500 });
+    expect(syntaxError(() => parse(nested(501)))).toEqual({
+      message: "Parentheses are nested too deeply.",
+      pos: 500,
+    });
+    expect(syntaxError(() => parse("a" + "^1*".repeat(2000)))).toEqual({
+      message: "This expression is nested too deeply.",
+      pos: undefined,
+    });
+  });
+
   it("never reads an escaped character as part of a count", () => {
     expect(parse("1^2\\3")).toMatchObject({ type: "cat", items: [{ n: 2 }, { c: "3" }] });
     expect(syntaxError(() => parse("1^\\1"))).toEqual({
