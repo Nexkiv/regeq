@@ -7,6 +7,8 @@ export type Token = {
   pos: number;
   /** Whether whitespace came right before this token. */
   space: boolean;
+  /** Written with a backslash, so always a plain letter. */
+  escaped: boolean;
 };
 
 export type SymNode = { type: "sym"; c: string; pos: number };
@@ -50,14 +52,15 @@ export function tokenize(src: string): { toks: Token[]; len: number } {
     const pos = i;
     let kind: Token["kind"] = "sym";
     let v = c;
-    if (c === "\\") {
+    const escaped = c === "\\";
+    if (escaped) {
       if (i + 1 >= chars.length)
         throw new RegexSyntaxError("A backslash needs a character after it.", i);
       v = chars[++i];
     } else if (c === "ε") kind = "eps";
     else if (c === "Σ") kind = "any";
     else if (OPS.has(c)) kind = "op";
-    toks.push({ kind, v, pos, space });
+    toks.push({ kind, v, pos, space, escaped });
     space = false;
   }
   return { toks, len: chars.length };
@@ -68,8 +71,9 @@ export function parse(src: string): Node {
   let i = 0;
   const peek = (): Token | undefined => toks[i];
   const isOp = (t: Token | undefined, v: string) => t?.kind === "op" && t.v === v;
-  const isSym = (t: Token | undefined, v: string) => t?.kind === "sym" && t.v === v;
-  const isDigit = (t: Token | undefined) => t?.kind === "sym" && /^[0-9]$/.test(t.v);
+  // Count syntax (digits and braces after ^) only uses unescaped characters.
+  const isSym = (t: Token | undefined, v: string) => t?.kind === "sym" && !t.escaped && t.v === v;
+  const isDigit = (t: Token | undefined) => t?.kind === "sym" && !t.escaped && /^[0-9]$/.test(t.v);
   const posOf = (t: Token | undefined) => (t ? t.pos : len);
 
   function union(): Node {

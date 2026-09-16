@@ -44,6 +44,19 @@ describe("parse", () => {
     expect(parse("a^2 3")).toMatchObject({ type: "cat", items: [{ n: 2 }, { c: "3" }] });
   });
 
+  it("never reads an escaped character as part of a count", () => {
+    expect(parse("1^2\\3")).toMatchObject({ type: "cat", items: [{ n: 2 }, { c: "3" }] });
+    expect(syntaxError(() => parse("1^\\1"))).toEqual({
+      message: "^ must be followed by a count, like ^3 or ^{3}.",
+      pos: 2,
+    });
+    expect(syntaxError(() => parse("1^{2\\}"))).toEqual({
+      message: "Expected a number and a closing } after ^{.",
+      pos: 4,
+    });
+    expect(syntaxError(() => parse("1^\\{2}"))).toMatchObject({ pos: 2 });
+  });
+
   it.each([
     ["a\\", "A backslash needs a character after it.", 1],
     ["a^", "^ must be followed by a count, like ^3 or ^{3}.", 2],
