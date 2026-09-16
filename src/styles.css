@@ -24,7 +24,7 @@ body {
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root {
     --paper: #202124;
     --ink: #d9d7d1;
     --muted: #9c9b97;
@@ -35,17 +35,6 @@ body {
     --good: #8fc4a2;
     --bad: #de9790;
   }
-}
-:root[data-theme="dark"] {
-  --paper: #202124;
-  --ink: #d9d7d1;
-  --muted: #9c9b97;
-  --hair: #3b3c40;
-  --field: #292a2e;
-  --mark: #303136;
-  --accent: #a0b9da;
-  --good: #8fc4a2;
-  --bad: #de9790;
 }
 
 * {
