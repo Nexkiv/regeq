@@ -5,12 +5,12 @@ export const MAX_NFA_COST = 400_000;
 export const MAX_STATE_PAIRS = 250_000;
 
 export type NFA = { eps: number[][]; trans: [string, number][][]; start: number; final: number };
-export type DFA = {
+type DFA = {
   start: number;
   step: (id: number, c: string) => number;
   accepts: (id: number) => boolean;
 };
-export type Search = {
+type Search = {
   only1: string[] | null;
   only2: string[] | null;
   explored: number;
@@ -23,28 +23,26 @@ export type Search = {
  * expressions are refused before they are built.
  */
 export function nfaCost(node: Node, alphabetSize: number): number {
-  const cost = (n: Node): number => {
-    switch (n.type) {
-      case "sym":
-      case "eps":
-        return 2;
-      case "any":
-        return 2 + alphabetSize;
-      case "alt":
-        return 2 + n.alts.reduce((s, a) => s + cost(a), 0);
-      case "cat":
-        return n.items.reduce((s, a) => s + cost(a), 0);
-      case "star":
-      case "plus":
-      case "opt":
-        return 2 + cost(n.a);
-      case "rep":
-        return 2 + n.n * cost(n.a);
-      default:
-        return assertNever(n);
-    }
-  };
-  return cost(node);
+  const cost = (n: Node) => nfaCost(n, alphabetSize);
+  switch (node.type) {
+    case "sym":
+    case "eps":
+      return 2;
+    case "any":
+      return 2 + alphabetSize;
+    case "alt":
+      return 2 + node.alts.reduce((s, a) => s + cost(a), 0);
+    case "cat":
+      return node.items.reduce((s, a) => s + cost(a), 0);
+    case "star":
+    case "plus":
+    case "opt":
+      return 2 + cost(node.a);
+    case "rep":
+      return 2 + node.n * cost(node.a);
+    default:
+      return assertNever(node);
+  }
 }
 
 /** Thompson construction. Σ ("any") becomes one transition per letter of the alphabet. */
@@ -178,7 +176,7 @@ export function findDistinguishingWords(
   d1: DFA,
   d2: DFA,
   alphabet: string[],
-  limit = MAX_STATE_PAIRS,
+  limit: number,
 ): Search {
   const seen = new Set([d1.start + ":" + d2.start]);
   const nodes = [{ a: d1.start, b: d2.start, parent: -1, c: "" }];

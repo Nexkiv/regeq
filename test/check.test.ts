@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildNFA, lazyDFA, nfaCost } from "../src/engine/automata";
-import { check } from "../src/engine/check";
-import { parse } from "../src/engine/syntax";
+import { buildNFA, lazyDFA, MAX_STATE_PAIRS, nfaCost } from "../src/engine/automata";
+import { check, formatCount, visible } from "../src/engine/check";
+import { MAX_HEIGHT, parse } from "../src/engine/syntax";
 import { EXAMPLES } from "../src/examples";
 import { compare } from "./helpers";
 
@@ -75,6 +75,31 @@ describe("alphabet", () => {
     });
   });
 
+  it("infers Σ when the box has no letters", () => {
+    expect(compare("a", "b", "{}")).toMatchObject({ status: "differ", alphabet: ["a", "b"] });
+  });
+
+  it("tells users to escape separators they want as letters", () => {
+    expect(check("{", "a{", "a, {")).toMatchObject({
+      errors: [
+        {
+          field: "r1",
+          message:
+            "“{” isn't in Σ. In the Σ box, write it as \\{ (a plain { separates letters there).",
+        },
+        { field: "r2", pos: 1 },
+      ],
+    });
+    expect(compare("{,", "{,", "\\{ \\,")).toMatchObject({ status: "equal" });
+  });
+
+  it("reports letters outside Σ alongside parse errors", () => {
+    expect(check("(", "2", "0")).toMatchObject({
+      message: "Fix the error in both expressions to see a result.",
+      errors: [{ field: "r1" }, { field: "r2", pos: 0 }],
+    });
+  });
+
   it("reports Σ-box errors", () => {
     expect(check("0", "0", "ε")).toMatchObject({
       status: "invalid",
@@ -130,7 +155,9 @@ describe("prompts and errors", () => {
       ],
     });
     expect(check("ε", "(Σ|Σ)", "")).toMatchObject({ errors: [{ field: "r2", pos: 1 }] });
-    expect(check("Σ*", "ε", "{}")).toMatchObject({ status: "equal", alphabet: [] });
+    // A Σ box with no letters counts as empty.
+    expect(check("Σ*", "ε", "{}")).toMatchObject({ status: "invalid", errors: [{ field: "r1" }] });
+    expect(check("Σ*", "ε", " , ")).toMatchObject({ status: "invalid", errors: [{ field: "r1" }] });
   });
 
   it("names the expressions that have errors", () => {
@@ -159,9 +186,13 @@ describe("prompts and errors", () => {
     expect(check("(Σ^100)^100", "Ā", sigma)).toMatchObject({ status: "tooBig" });
   });
 
+  it("handles very long expressions", () => {
+    expect(check("a".repeat(150_000), "a", "")).toMatchObject({ status: "differ" });
+  });
+
   it("handles very long operator chains", () => {
     expect(check("a" + "*".repeat(100_000), "a*", "")).toMatchObject({ status: "equal" });
-    expect(check("a" + "^1*".repeat(2000), "a*", "")).toMatchObject({
+    expect(check("a" + "^1*".repeat(MAX_HEIGHT), "a*", "")).toMatchObject({
       status: "invalid",
       errors: [{ field: "r1", message: "This expression is nested too deeply." }],
     });
@@ -175,7 +206,10 @@ describe("prompts and errors", () => {
       only2: "2",
       explored: 20,
     });
-    expect(compare("(0|1)*1(0|1)^17", "(0|1)*1(0|1)^17|2")).toMatchObject({
+    // "A 1 exactly k+1 letters from the end" needs 2^(k+1) DFA states, more than the limit.
+    const k = Math.floor(Math.log2(MAX_STATE_PAIRS));
+    const tail = `(0|1)*1(0|1)^${k}`;
+    expect(compare(tail, `${tail}|2`)).toMatchObject({
       status: "differ",
       partial: true,
       only2: "2",
@@ -186,7 +220,7 @@ describe("prompts and errors", () => {
     expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5", "", 20)).toMatchObject({
       status: "tooBig",
       message:
-        "These expressions are too large to check: the combined automaton passes 20 states. Try smaller repeat counts.",
+        "These expressions are too large to check: the search reached 20 state pairs without finishing. Try shorter or simpler expressions.",
     });
   });
 });
@@ -208,6 +242,16 @@ describe("automata", () => {
     const accepts = (w: string) => dfa.accepts([...w].reduce(dfa.step, dfa.start));
     expect(["a", "b", "ab", "abab"].map(accepts)).toEqual([true, true, true, true]);
     expect(["", "aa", "aba", "ba"].map(accepts)).toEqual([false, false, false, false]);
+  });
+});
+
+describe("formatting", () => {
+  it("makes whitespace visible", () => {
+    expect([" ", "\t", "\u00a0", "a"].map(visible)).toEqual(["␣", "U+0009", "U+00A0", "a"]);
+  });
+
+  it("formats counts with US separators", () => {
+    expect(formatCount(250_000)).toBe("250,000");
   });
 });
 

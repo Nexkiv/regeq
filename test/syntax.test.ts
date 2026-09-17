@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { letters, parse, parseSigma } from "../src/engine/syntax";
+import {
+  letters,
+  MAX_HEIGHT,
+  MAX_PARENS,
+  MAX_REPEAT,
+  parse,
+  parseSigma,
+} from "../src/engine/syntax";
 import { syntaxError } from "./helpers";
 
 describe("parse", () => {
@@ -67,12 +74,12 @@ describe("parse", () => {
 
   it("limits nesting", () => {
     const nested = (k: number) => "(".repeat(k) + "a" + ")".repeat(k);
-    expect(parse(nested(500))).toEqual({ type: "sym", c: "a", pos: 500 });
-    expect(syntaxError(() => parse(nested(501)))).toEqual({
+    expect(parse(nested(MAX_PARENS))).toEqual({ type: "sym", c: "a", pos: MAX_PARENS });
+    expect(syntaxError(() => parse(nested(MAX_PARENS + 1)))).toEqual({
       message: "Parentheses are nested too deeply.",
-      pos: 500,
+      pos: MAX_PARENS,
     });
-    expect(syntaxError(() => parse("a" + "^1*".repeat(2000)))).toEqual({
+    expect(syntaxError(() => parse("a" + "^1*".repeat(MAX_HEIGHT)))).toEqual({
       message: "This expression is nested too deeply.",
       pos: undefined,
     });
@@ -95,7 +102,7 @@ describe("parse", () => {
     ["a\\", "A backslash needs a character after it.", 1],
     ["a^", "^ must be followed by a count, like ^3 or ^{3}.", 2],
     ["a^{3", "Expected a number and a closing } after ^{.", 4],
-    ["a^5001", "Repeat counts above 5000 aren't supported.", 1],
+    [`a^${MAX_REPEAT + 1}`, `Repeat counts above ${MAX_REPEAT} aren't supported.`, 1],
     ["(a", "This ( is never closed.", 0],
     ["a)", "This ) has no matching (.", 1],
     ["*a", "“*” needs something before it to apply to.", 0],
@@ -120,11 +127,12 @@ describe("parseSigma", () => {
     expect([...parseSigma("0, -, 1")]).toEqual(["0", "-", "1"]);
     expect([...parseSigma("a\\-z")]).toEqual(["a", "-", "z"]);
     expect([...parseSigma("-a, b-")]).toEqual(["-", "a", "b"]);
+    expect([...parseSigma("a - b")]).toEqual(["a", "-", "b"]);
   });
 
   it.each([
     ["a-z", 1],
-    ["0 - 9", 2],
+    ["x, 0-9", 4],
   ])("rejects the range %s", (src, pos) => {
     expect(syntaxError(() => parseSigma(src))).toEqual({
       message: "Ranges aren't supported. List each letter, or write \\- for a dash.",
