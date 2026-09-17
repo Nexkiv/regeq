@@ -7,7 +7,7 @@ Checks whether two regular expressions describe the same language. If they don't
 Based on [RegEq](https://bakkot.github.io/dfa-lib/regeq.html) by Kevin Gibbons (Stanford CS103). Compared with the original:
 
 - **Digits are letters.** A count still follows `^` (`a^3`); write `a^{3}` or `a^3 ` (with a space) when a digit letter comes right after it.
-- **`ε`** is the empty string, and **`Σ`** is any one letter of the alphabet.
+- **`ε`** is the empty string, **`Σ`** is any one letter of the alphabet, and **`∪`** is union, the same as `|`.
 - **An optional Σ box** sets the alphabet by hand. Left empty, Σ is every letter used in either expression.
 - **`\x`** always means the character `x` itself.
 

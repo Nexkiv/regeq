@@ -41,7 +41,8 @@ export function assertNever(x: never): never {
   throw new Error(`Unexpected value: ${JSON.stringify(x)}`);
 }
 
-const OPS = new Set(["|", "*", "+", "?", "(", ")", "^"]);
+// ∪ is union, written the way lectures often do; it behaves exactly like |.
+const OPS = new Set(["|", "∪", "*", "+", "?", "(", ")", "^"]);
 
 function tokenize(src: string): { toks: Token[]; len: number } {
   const chars = Array.from(src);
@@ -80,20 +81,21 @@ export function parse(src: string): Node {
   const isSym = (t: Token | undefined, v: string) => t?.kind === "sym" && !t.escaped && t.v === v;
   const isDigit = (t: Token | undefined) => t?.kind === "sym" && !t.escaped && /^[0-9]$/.test(t.v);
   const posOf = (t: Token | undefined) => (t ? t.pos : len);
+  const isUnion = (t: Token | undefined) => isOp(t, "|") || isOp(t, "∪");
 
   function union(): Node {
     const alts = [concat()];
-    while (isOp(peek(), "|")) {
+    while (isUnion(peek())) {
       i++;
       alts.push(concat());
     }
     return alts.length === 1 ? alts[0] : { type: "alt", alts };
   }
 
-  // concat() only calls postfix() when a token exists that is neither | nor ).
+  // concat() only calls postfix() when a token exists that is neither a union nor ).
   function concat(): Node {
     const items: Node[] = [];
-    while (peek() && !isOp(peek(), "|") && !isOp(peek(), ")")) items.push(postfix());
+    while (peek() && !isUnion(peek()) && !isOp(peek(), ")")) items.push(postfix());
     if (items.length === 0) return { type: "eps" };
     return items.length === 1 ? items[0] : { type: "cat", items };
   }
@@ -168,7 +170,7 @@ export function parse(src: string): Node {
         return { type: "eps" };
       case "any":
         return { type: "any", pos: t.pos };
-      case "op": // concat() never hands us | or ), so this is a postfix operator
+      case "op": // concat() never hands us a union or ), so this is a postfix operator
         throw new RegexSyntaxError(`“${t.v}” needs something before it to apply to.`, t.pos);
       default:
         return assertNever(t.kind);

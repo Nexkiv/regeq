@@ -82,7 +82,8 @@ h1 {
 }
 .row {
   display: grid;
-  grid-template-columns: 3.2rem 1fr 5.2rem;
+  /* label | input | three insert keys (or the "optional" note) */
+  grid-template-columns: 3.2rem 1fr 7.7rem;
   align-items: center;
   gap: 10px;
 }
@@ -298,7 +299,10 @@ a {
     font-size: 17px;
   }
   .row {
-    grid-template-columns: 2.8rem 1fr auto;
+    grid-template-columns: 2.8rem 1fr 6.8rem;
+  }
+  .key {
+    width: 2rem;
   }
   .examples .dim {
     display: none;

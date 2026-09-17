@@ -169,6 +169,7 @@ export function renderExamples(tbody: HTMLElement, onLoad: (example: Example) =>
 const INSERT_KEYS = [
   { text: "ε", className: "key eps" },
   { text: "Σ", className: "key" },
+  { text: "∪", className: "key" },
 ];
 
 export function renderKeys(

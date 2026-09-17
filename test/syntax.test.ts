@@ -26,6 +26,16 @@ describe("parse", () => {
     });
   });
 
+  it("reads ∪ exactly like |", () => {
+    expect(parse("a∪bc*")).toEqual(parse("a|bc*"));
+    expect(parse("(0∪)1∪")).toEqual(parse("(0|)1|"));
+    expect(parse("∪")).toEqual({ type: "alt", alts: [{ type: "eps" }, { type: "eps" }] });
+  });
+
+  it("reads \\∪ as the letter ∪", () => {
+    expect(parse("\\∪")).toEqual({ type: "sym", c: "∪", pos: 0 });
+  });
+
   it("reads empty input, (), and empty union sides as ε", () => {
     expect(parse("")).toEqual({ type: "eps" });
     expect(parse("()")).toEqual({ type: "eps" });
@@ -117,6 +127,10 @@ describe("parse", () => {
 describe("parseSigma", () => {
   it("accepts commas, spaces, braces and escapes", () => {
     expect([...parseSigma("{0, 1 2,\\,}")]).toEqual(["0", "1", "2", ","]);
+  });
+
+  it("treats ∪ as a letter", () => {
+    expect([...parseSigma("0, ∪")]).toEqual(["0", "∪"]);
   });
 
   it("treats operators and escaped symbols as letters", () => {
