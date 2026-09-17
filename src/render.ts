@@ -35,11 +35,14 @@ function setProof(...parts: (Node | string)[]) {
   p.replaceChildren(envName("Proof."), ...parts, el("span", "qed", "∎"));
 }
 
-/** Marks the result as out of date while a slow check runs. */
-export function setChecking(checking: boolean) {
-  const region = $("result");
-  region.setAttribute("aria-busy", String(checking));
-  if (checking) setRemark("Checking…");
+/** Replaces the result with "Checking…" while a slow check runs. */
+export function showChecking() {
+  $("result").setAttribute("aria-busy", "true");
+  setRemark("Checking…");
+}
+
+export function clearChecking() {
+  $("result").setAttribute("aria-busy", "false");
 }
 
 export function setRemark(text: string) {
@@ -124,17 +127,18 @@ export function clearError(input: HTMLInputElement, box: HTMLElement) {
   box.hidden = true;
 }
 
-/** Shows `message` under the input and underlines the character at `pos`. */
+/** Shows `message` under the input and underlines the character at `pos` of `text`. */
 export function showError(
   input: HTMLInputElement,
   box: HTMLElement,
+  text: string,
   message: string,
   pos?: number,
 ) {
   input.classList.add("invalid");
   box.replaceChildren(message);
   if (pos !== undefined) {
-    const chars = Array.from(input.value);
+    const chars = Array.from(text);
     const mark = el("mark", "", chars[pos] ?? " ");
     box.append(el("pre", "", chars.slice(0, pos).join(""), mark, chars.slice(pos + 1).join("")));
   }

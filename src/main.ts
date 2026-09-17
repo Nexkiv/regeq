@@ -8,7 +8,14 @@ import "./styles.css";
 
 import type { CheckResult, Field } from "./engine/check";
 import { renderExamples, renderKeys } from "./examples";
-import { clearError, renderResult, setChecking, setRemark, showError } from "./render";
+import {
+  clearChecking,
+  clearError,
+  renderResult,
+  setRemark,
+  showChecking,
+  showError,
+} from "./render";
 import type { CheckRequest, CheckResponse } from "./worker";
 
 const DEBOUNCE_MS = 150;
@@ -27,7 +34,8 @@ const fields: Record<Field, { input: HTMLInputElement; error: HTMLElement }> = {
 // busy with an older request is terminated rather than left running.
 
 let worker: Worker | null = null;
-let latest = 0;
+/** The most recent request; only its reply is shown. */
+let latest: CheckRequest = { id: 0, r1: "", r2: "", sigma: "" };
 let busy = false;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let checkingTimer: ReturnType<typeof setTimeout> | undefined;
@@ -35,7 +43,7 @@ let checkingTimer: ReturnType<typeof setTimeout> | undefined;
 function startWorker(): Worker {
   const w = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
   w.addEventListener("message", (event: MessageEvent<CheckResponse>) => {
-    if (event.data.id !== latest) return;
+    if (event.data.id !== latest.id) return;
     settle();
     if ("failed" in event.data) fail();
     else show(event.data.result);
@@ -53,17 +61,23 @@ function startWorker(): Worker {
 function settle() {
   busy = false;
   clearTimeout(checkingTimer);
-  setChecking(false);
+  clearChecking();
+}
+
+function clearErrors() {
+  for (const { input, error } of Object.values(fields)) clearError(input, error);
 }
 
 function fail() {
+  clearErrors();
   setRemark("Something went wrong checking these expressions.");
 }
 
 function show(result: CheckResult) {
-  for (const { input, error } of Object.values(fields)) clearError(input, error);
+  clearErrors();
+  // Underline against the text that was checked, which may differ from what's typed by now.
   for (const { field, message, pos } of result.errors)
-    showError(fields[field].input, fields[field].error, message, pos);
+    showError(fields[field].input, fields[field].error, latest[field], message, pos);
   renderResult(result);
 }
 
@@ -75,14 +89,17 @@ function send() {
   worker ??= startWorker();
   busy = true;
   clearTimeout(checkingTimer);
-  checkingTimer = setTimeout(() => setChecking(true), SHOW_CHECKING_AFTER_MS);
-  const request: CheckRequest = {
-    id: ++latest,
+  checkingTimer = setTimeout(() => {
+    clearErrors();
+    showChecking();
+  }, SHOW_CHECKING_AFTER_MS);
+  latest = {
+    id: latest.id + 1,
     r1: fields.r1.input.value,
     r2: fields.r2.input.value,
     sigma: fields.sigma.input.value,
   };
-  worker.postMessage(request);
+  worker.postMessage(latest);
 }
 
 /** Checks the current input, after a short pause unless `now` is set. */
