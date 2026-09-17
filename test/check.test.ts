@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildNFA, lazyDFA, nfaCost } from "../src/engine/automata";
+import { buildNFA, lazyDFA, MAX_STATE_PAIRS, nfaCost } from "../src/engine/automata";
 import { check, formatCount, visible } from "../src/engine/check";
-import { parse } from "../src/engine/syntax";
+import { MAX_HEIGHT, parse } from "../src/engine/syntax";
 import { EXAMPLES } from "../src/examples";
 import { compare } from "./helpers";
 
@@ -192,7 +192,7 @@ describe("prompts and errors", () => {
 
   it("handles very long operator chains", () => {
     expect(check("a" + "*".repeat(100_000), "a*", "")).toMatchObject({ status: "equal" });
-    expect(check("a" + "^1*".repeat(2000), "a*", "")).toMatchObject({
+    expect(check("a" + "^1*".repeat(MAX_HEIGHT), "a*", "")).toMatchObject({
       status: "invalid",
       errors: [{ field: "r1", message: "This expression is nested too deeply." }],
     });
@@ -206,7 +206,10 @@ describe("prompts and errors", () => {
       only2: "2",
       explored: 20,
     });
-    expect(compare("(0|1)*1(0|1)^17", "(0|1)*1(0|1)^17|2")).toMatchObject({
+    // "A 1 exactly k+1 letters from the end" needs 2^(k+1) DFA states, more than the limit.
+    const k = Math.floor(Math.log2(MAX_STATE_PAIRS));
+    const tail = `(0|1)*1(0|1)^${k}`;
+    expect(compare(tail, `${tail}|2`)).toMatchObject({
       status: "differ",
       partial: true,
       only2: "2",

@@ -4,28 +4,14 @@ Checks whether two regular expressions describe the same language. If they don't
 
 **Live:** https://nexkiv.github.io/regeq/
 
-Based on [RegEq](https://bakkot.github.io/dfa-lib/regeq.html) by Kevin Gibbons (Stanford CS103). The original reserves digits for repeat counts. Here digits are ordinary letters, and a few things are added.
+Based on [RegEq](https://bakkot.github.io/dfa-lib/regeq.html) by Kevin Gibbons (Stanford CS103). Compared with the original:
 
-## Syntax
+- **Digits are letters.** A count still follows `^` (`a^3`); write `a^{3}` or `a^3 ` (with a space) when a digit letter comes right after it.
+- **`ε`** is the empty string, and **`Σ`** is any one letter of the alphabet.
+- **An optional Σ box** sets the alphabet by hand. Left empty, Σ is every letter used in either expression.
+- **`\x`** always means the character `x` itself.
 
-From loosest to tightest binding:
-
-| Write            | Meaning                                                               |
-| ---------------- | --------------------------------------------------------------------- |
-| `a \| b`         | Union. Either side may be empty, so `a\|` matches `a` or nothing.     |
-| `a b`            | Concatenation.                                                        |
-| `a?`, `a*`, `a+` | Zero or one, zero or more, one or more.                               |
-| `a^N`            | Exactly N copies. Every digit right after `^` is part of N.           |
-| `a^{N}`          | The same, but the braces end the count: `1^{2}3` is `113`.            |
-| `(a)`            | Grouping. `()` is the empty string.                                   |
-| `ε`              | The empty string.                                                     |
-| `Σ`              | Any one letter of the alphabet. If Σ = {0, 1}, `Σ` means `(0\|1)`.    |
-| `\x`             | The character `x` itself, e.g. `\*`, `\ε`, `\Σ`, or `\ ` for a space. |
-| anything else    | A letter, including digits and `{ } [ ] . -`.                         |
-
-Spaces are ignored, except around counts. A space ends an unbraced count (`1^2 3` is `113`), and a count can't start with or contain a space.
-
-**The alphabet.** Σ is every letter that appears in either expression. The optional **Σ =** box sets it by hand instead: list letters separated by commas or spaces, like `0, 1, 2` (braces are optional). Ranges like `0-9` aren't supported; write `\-` for a dash.
+The full syntax is in the **Syntax** section on the page (`index.html`), which is the reference.
 
 ## Development
 
@@ -58,7 +44,7 @@ test/                   unit tests for the engine
 
 ### How it works
 
-`check()` parses both expressions into trees, builds a Thompson NFA for each, and searches the product of their (lazily built) DFAs breadth-first for a string accepted by exactly one. Breadth-first order makes each counterexample the shortest possible, and the alphabetically first among those. Very large inputs are refused, or the search stops after 250,000 state pairs.
+`check()` parses both expressions into trees, builds a Thompson NFA for each, and searches the product of their (lazily built) DFAs breadth-first for a string accepted by exactly one. Breadth-first order makes each counterexample the shortest possible, and the first in character-code order among those. Very large inputs are refused, and the search stops at a fixed number of state pairs (`MAX_STATE_PAIRS`).
 
 ### Deployment
 
