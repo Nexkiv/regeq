@@ -159,6 +159,10 @@ describe("prompts and errors", () => {
     expect(check("(Σ^100)^100", "Ā", sigma)).toMatchObject({ status: "tooBig" });
   });
 
+  it("handles very long expressions", () => {
+    expect(check("a".repeat(150_000), "a", "")).toMatchObject({ status: "differ" });
+  });
+
   it("handles very long operator chains", () => {
     expect(check("a" + "*".repeat(100_000), "a*", "")).toMatchObject({ status: "equal" });
     expect(check("a" + "^1*".repeat(2000), "a*", "")).toMatchObject({

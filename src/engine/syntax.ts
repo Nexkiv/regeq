@@ -224,7 +224,9 @@ export function* walk(root: Node): Generator<Node> {
   while (stack.length) {
     const node = stack.pop()!;
     yield node;
-    stack.push(...[...children(node)].reverse());
+    // Push one at a time: spreading a huge child list into push() overflows the stack.
+    const kids = children(node);
+    for (let k = kids.length - 1; k >= 0; k--) stack.push(kids[k]);
   }
 }
 
