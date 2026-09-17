@@ -16,11 +16,23 @@ const lang = (n: 1 | 2) =>
 
 const envName = (name: string) => el("span", "env-name", name);
 
-function subject(w: string[], capital: boolean): (Node | string)[] {
-  const the = capital ? "The" : "the";
-  if (w.length === 0) return [`${the} empty string `, el("i", "", "ε")];
-  return [`${the} string `, el("span", "witness", w.map(visible).join(""))];
+type Article = "The" | "the";
+
+/** "the string 10" or "the empty string ε". */
+function subject(w: string[], article: Article): (Node | string)[] {
+  if (w.length === 0) return [`${article} empty string `, el("i", "", "ε")];
+  return [`${article} string `, el("span", "witness", w.map(visible).join(""))];
 }
+
+/** "L(Rₐ) but not in L(R_b)". */
+const inNotIn = (a: 1 | 2, b: 1 | 2) => [lang(a), " but not in ", lang(b)];
+
+/** "the string w is in L(Rₐ) but not in L(R_b)". */
+const witness = (w: string[], article: Article, a: 1 | 2, b: 1 | 2) => [
+  ...subject(w, article),
+  " is in ",
+  ...inNotIn(a, b),
+];
 
 function setClaim(cls: string, left: 1 | 2, rel: string, right: 1 | 2) {
   const c = $("claim");
@@ -72,17 +84,9 @@ export function renderResult(result: CheckResult) {
   if (only1 && only2) {
     setClaim("ne", 1, "≠", 2);
     setProof(
-      ...subject(only1, true),
-      " is in ",
-      lang(1),
-      " but not in ",
-      lang(2),
+      ...witness(only1, "The", 1, 2),
       ", and ",
-      ...subject(only2, false),
-      " is in ",
-      lang(2),
-      " but not in ",
-      lang(1),
+      ...witness(only2, "the", 2, 1),
       `. Both are the shortest such strings over ${sigma}.`,
     );
     return;
@@ -93,15 +97,9 @@ export function renderResult(result: CheckResult) {
     // The other direction was never finished, so only inequality is proven.
     setClaim("ne", 1, "≠", 2);
     setProof(
-      ...subject(w, true),
-      " is in ",
-      lang(big),
-      " but not in ",
-      lang(small),
+      ...witness(w, "The", big, small),
       `, and it is the shortest such string over ${sigma}. The search stopped early, after ${formatCount(explored)} state pairs. It found no string in `,
-      lang(small),
-      " but not in ",
-      lang(big),
+      ...inNotIn(small, big),
       " among those, but can't rule one out.",
     );
     return;
@@ -112,12 +110,8 @@ export function renderResult(result: CheckResult) {
     lang(small),
     " is also in ",
     lang(big),
-    ", but ",
-    ...subject(w, false),
-    " is in ",
-    lang(big),
-    " and not in ",
-    lang(small),
+    ", and ",
+    ...witness(w, "the", big, small),
     `. It is the shortest such string over ${sigma}.`,
   );
 }

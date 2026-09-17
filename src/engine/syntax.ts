@@ -120,23 +120,27 @@ export function parse(src: string): Node {
   }
 
   function count(caret: Token): number {
+    const rejectSpace = (t: Token) => {
+      if (t.space) throw new RegexSyntaxError("Spaces aren't allowed inside a count.", t.pos);
+    };
     let digits = "";
     const first = peek();
-    if ((isDigit(first) || isSym(first, "{")) && first!.space)
-      throw new RegexSyntaxError("Put the count right after ^.", first!.pos);
+    if (first?.space && (isDigit(first) || isSym(first, "{")))
+      throw new RegexSyntaxError("Put the count right after ^.", first.pos);
     if (isSym(first, "{")) {
       i++;
-      while (isDigit(peek()) || isSym(peek(), "}")) {
-        const t = toks[i++];
-        if (t.space) throw new RegexSyntaxError("Spaces aren't allowed inside a count.", t.pos);
-        if (t.v === "}") break;
-        digits += t.v;
+      while (isDigit(peek())) {
+        rejectSpace(toks[i]);
+        digits += toks[i++].v;
       }
-      if (!isSym(toks[i - 1], "}"))
-        throw new RegexSyntaxError("Expected a number and a closing } after ^{.", posOf(peek()));
+      const close = peek();
+      if (!close || !isSym(close, "}"))
+        throw new RegexSyntaxError("Expected a number and a closing } after ^{.", posOf(close));
+      rejectSpace(close);
+      i++;
     } else {
       // A space ends an unbraced count, so 1^2 3 is 113.
-      while (isDigit(peek()) && (digits === "" || !peek()!.space)) digits += toks[i++].v;
+      while (isDigit(peek()) && !peek()!.space) digits += toks[i++].v;
     }
     if (!digits)
       throw new RegexSyntaxError("^ must be followed by a count, like ^3 or ^{3}.", posOf(peek()));

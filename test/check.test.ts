@@ -93,6 +93,13 @@ describe("alphabet", () => {
     expect(compare("{,", "{,", "\\{ \\,")).toMatchObject({ status: "equal" });
   });
 
+  it("reports letters outside Σ alongside parse errors", () => {
+    expect(check("(", "2", "0")).toMatchObject({
+      message: "Fix the error in both expressions to see a result.",
+      errors: [{ field: "r1" }, { field: "r2", pos: 0 }],
+    });
+  });
+
   it("reports Σ-box errors", () => {
     expect(check("0", "0", "ε")).toMatchObject({
       status: "invalid",
