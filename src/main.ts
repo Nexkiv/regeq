@@ -1,11 +1,9 @@
-import "@fontsource/stix-two-text/latin-400.css";
-import "@fontsource/stix-two-text/latin-400-italic.css";
-import "@fontsource/stix-two-text/latin-600.css";
-import "@fontsource/stix-two-text/latin-ext-400.css";
-import "@fontsource/stix-two-text/greek-400.css";
-import "@fontsource/stix-two-text/greek-400-italic.css";
-import "@fontsource/ibm-plex-mono/latin-400.css";
-import "@fontsource/ibm-plex-mono/latin-500.css";
+// Per-weight files carry unicode-range, so browsers download only the subsets a page uses.
+import "@fontsource/stix-two-text/400.css";
+import "@fontsource/stix-two-text/400-italic.css";
+import "@fontsource/stix-two-text/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./styles.css";
 
 import type { CheckResult, Field } from "./engine/check";
