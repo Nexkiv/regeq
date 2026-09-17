@@ -1,5 +1,5 @@
 // Turns check results into DOM, typeset like a textbook claim and proof.
-import { visible, type CheckResult } from "./engine/check";
+import { formatCount, visible, type CheckResult } from "./engine/check";
 
 export function el(tag: string, cls: string, ...kids: (Node | string)[]): HTMLElement {
   const n = document.createElement(tag);
@@ -63,7 +63,7 @@ export function renderResult(result: CheckResult) {
   if (result.status === "equal") {
     setClaim("eq", 1, "=", 2);
     setProof(
-      `Over ${sigma}, a breadth-first search of the product automaton reaches ${explored.toLocaleString()} state ${explored === 1 ? "pair" : "pairs"}, and in none of them does exactly one expression accept.`,
+      `Over ${sigma}, a breadth-first search of the product automaton reaches ${formatCount(explored)} state ${explored === 1 ? "pair" : "pairs"}, and in none of them does exactly one expression accept.`,
     );
     return;
   }
@@ -98,11 +98,11 @@ export function renderResult(result: CheckResult) {
       lang(big),
       " but not in ",
       lang(small),
-      `, and it is the shortest such string over ${sigma}. The search stopped early, after ${explored.toLocaleString()} state pairs, so it did not check for strings in `,
+      `, and it is the shortest such string over ${sigma}. The search stopped early, after ${formatCount(explored)} state pairs. It found no string in `,
       lang(small),
       " but not in ",
       lang(big),
-      ".",
+      " among those, but can't rule one out.",
     );
     return;
   }

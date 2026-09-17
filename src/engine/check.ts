@@ -133,12 +133,21 @@ export function check(
   if (cutOff)
     return {
       status: "tooBig",
-      message: `These expressions are too large to check: the combined automaton passes ${limit.toLocaleString("en-US")} states. Try smaller repeat counts.`,
+      message: `These expressions are too large to check: the search reached ${formatCount(limit)} state pairs without finishing. Try shorter or simpler expressions.`,
       errors: [],
     };
 
   return { status: "equal", alphabet, explored, errors: [] };
 }
 
-/** Shows a space as ␣ so it is visible in messages and witnesses. */
-export const visible = (c: string) => (c === " " ? "␣" : c);
+/** Makes whitespace visible in messages and witnesses: ␣ for a space, U+XXXX for others. */
+export function visible(c: string): string {
+  if (c === " ") return "␣";
+  if (!/\s/.test(c)) return c;
+  return "U+" + c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0");
+}
+
+/** Formats counts the same way everywhere, whatever the browser's locale. */
+export function formatCount(n: number): string {
+  return n.toLocaleString("en-US");
+}

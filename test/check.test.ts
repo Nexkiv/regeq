@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildNFA, lazyDFA, nfaCost } from "../src/engine/automata";
-import { check } from "../src/engine/check";
+import { check, formatCount, visible } from "../src/engine/check";
 import { parse } from "../src/engine/syntax";
 import { EXAMPLES } from "../src/examples";
 import { compare } from "./helpers";
@@ -210,7 +210,7 @@ describe("prompts and errors", () => {
     expect(check("(0|1)*1(0|1)^5", "(0|1)*1(0|1)^5", "", 20)).toMatchObject({
       status: "tooBig",
       message:
-        "These expressions are too large to check: the combined automaton passes 20 states. Try smaller repeat counts.",
+        "These expressions are too large to check: the search reached 20 state pairs without finishing. Try shorter or simpler expressions.",
     });
   });
 });
@@ -232,6 +232,16 @@ describe("automata", () => {
     const accepts = (w: string) => dfa.accepts([...w].reduce(dfa.step, dfa.start));
     expect(["a", "b", "ab", "abab"].map(accepts)).toEqual([true, true, true, true]);
     expect(["", "aa", "aba", "ba"].map(accepts)).toEqual([false, false, false, false]);
+  });
+});
+
+describe("formatting", () => {
+  it("makes whitespace visible", () => {
+    expect([" ", "\t", "\u00a0", "a"].map(visible)).toEqual(["␣", "U+0009", "U+00A0", "a"]);
+  });
+
+  it("formats counts with US separators", () => {
+    expect(formatCount(250_000)).toBe("250,000");
   });
 });
 
