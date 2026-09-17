@@ -28,6 +28,7 @@ export type CheckResult =
       errors: [];
     };
 
+const SIGMA_SEPARATORS = new Set([",", "{", "}"]);
 const LABEL: Record<Field, string> = { r1: "R₁", r2: "R₂", sigma: "Σ" };
 
 export function check(
@@ -52,7 +53,9 @@ export function check(
   const blank2 = !r2.trim();
   let ast1 = blank1 ? null : attempt("r1", () => parse(r1));
   let ast2 = blank2 ? null : attempt("r2", () => parse(r2));
-  const given = sigmaText.trim() ? attempt("sigma", () => parseSigma(sigmaText)) : null;
+  // A Σ box with no letters (blank, or only separators like "{}") counts as empty.
+  const parsedSigma = sigmaText.trim() ? attempt("sigma", () => parseSigma(sigmaText)) : null;
+  const given = parsedSigma?.size ? parsedSigma : null;
 
   if (blank1 && blank2)
     return { status: "prompt", message: "Enter two regular expressions to compare them.", errors };
@@ -66,7 +69,9 @@ export function check(
       if (!bad) return ast;
       errors.push({
         field,
-        message: `“${visible(bad.c)}” isn't in Σ. Add it to Σ, or clear Σ to use the letters in the expressions.`,
+        message: SIGMA_SEPARATORS.has(bad.c)
+          ? `“${bad.c}” isn't in Σ. In the Σ box, write it as \\${bad.c} (a plain ${bad.c} separates letters there).`
+          : `“${visible(bad.c)}” isn't in Σ. Add it to Σ, or clear Σ to use the letters in the expressions.`,
         pos: bad.pos,
       });
       return null;

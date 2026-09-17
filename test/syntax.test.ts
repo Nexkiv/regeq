@@ -120,11 +120,12 @@ describe("parseSigma", () => {
     expect([...parseSigma("0, -, 1")]).toEqual(["0", "-", "1"]);
     expect([...parseSigma("a\\-z")]).toEqual(["a", "-", "z"]);
     expect([...parseSigma("-a, b-")]).toEqual(["-", "a", "b"]);
+    expect([...parseSigma("a - b")]).toEqual(["a", "-", "b"]);
   });
 
   it.each([
     ["a-z", 1],
-    ["0 - 9", 2],
+    ["x, 0-9", 4],
   ])("rejects the range %s", (src, pos) => {
     expect(syntaxError(() => parseSigma(src))).toEqual({
       message: "Ranges aren't supported. List each letter, or write \\- for a dash.",

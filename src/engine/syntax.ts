@@ -188,7 +188,17 @@ export function parseSigma(src: string): Set<string> {
       );
     if (isSeparator(t)) return;
     const [prev, next] = [toks[k - 1], toks[k + 1]];
-    if (t.v === "-" && !t.escaped && prev && next && !isSeparator(prev) && !isSeparator(next))
+    // Only a dash written tight between two letters (a-z) looks like a range.
+    const tight = !t.space && !next?.space;
+    if (
+      t.v === "-" &&
+      !t.escaped &&
+      tight &&
+      prev &&
+      next &&
+      !isSeparator(prev) &&
+      !isSeparator(next)
+    )
       throw new RegexSyntaxError(
         "Ranges aren't supported. List each letter, or write \\- for a dash.",
         t.pos,

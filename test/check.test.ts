@@ -75,6 +75,24 @@ describe("alphabet", () => {
     });
   });
 
+  it("infers Σ when the box has no letters", () => {
+    expect(compare("a", "b", "{}")).toMatchObject({ status: "differ", alphabet: ["a", "b"] });
+  });
+
+  it("tells users to escape separators they want as letters", () => {
+    expect(check("{", "a{", "a, {")).toMatchObject({
+      errors: [
+        {
+          field: "r1",
+          message:
+            "“{” isn't in Σ. In the Σ box, write it as \\{ (a plain { separates letters there).",
+        },
+        { field: "r2", pos: 1 },
+      ],
+    });
+    expect(compare("{,", "{,", "\\{ \\,")).toMatchObject({ status: "equal" });
+  });
+
   it("reports Σ-box errors", () => {
     expect(check("0", "0", "ε")).toMatchObject({
       status: "invalid",
@@ -130,7 +148,9 @@ describe("prompts and errors", () => {
       ],
     });
     expect(check("ε", "(Σ|Σ)", "")).toMatchObject({ errors: [{ field: "r2", pos: 1 }] });
-    expect(check("Σ*", "ε", "{}")).toMatchObject({ status: "equal", alphabet: [] });
+    // A Σ box with no letters counts as empty.
+    expect(check("Σ*", "ε", "{}")).toMatchObject({ status: "invalid", errors: [{ field: "r1" }] });
+    expect(check("Σ*", "ε", " , ")).toMatchObject({ status: "invalid", errors: [{ field: "r1" }] });
   });
 
   it("names the expressions that have errors", () => {
