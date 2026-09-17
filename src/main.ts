@@ -6,11 +6,12 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./styles.css";
 
-import type { CheckResult, Field } from "./engine/check";
-import { renderExamples, renderKeys } from "./examples";
+import { LABEL, type CheckResult, type Field } from "./engine/check";
 import {
   clearChecking,
   clearError,
+  renderExamples,
+  renderKeys,
   renderResult,
   setRemark,
   showChecking,
@@ -76,8 +77,10 @@ function fail() {
 function show(result: CheckResult) {
   clearErrors();
   // Underline against the text that was checked, which may differ from what's typed by now.
-  for (const { field, message, pos } of result.errors)
-    showError(fields[field].input, fields[field].error, latest[field], message, pos);
+  for (const { field, message, pos } of result.errors) {
+    const { input, error } = fields[field];
+    showError(input, error, latest[field], message, pos);
+  }
   renderResult(result);
 }
 
@@ -102,11 +105,16 @@ function send() {
   worker.postMessage(latest);
 }
 
-/** Checks the current input, after a short pause unless `now` is set. */
-function run(now = false) {
+/** Checks the current input right away. */
+function runNow() {
   clearTimeout(debounceTimer);
-  if (now) send();
-  else debounceTimer = setTimeout(send, DEBOUNCE_MS);
+  send();
+}
+
+/** Checks the current input once typing pauses. */
+function runSoon() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(send, DEBOUNCE_MS);
 }
 
 // ---- Wiring ----
@@ -115,24 +123,21 @@ renderExamples($("examples"), ({ r1, r2, sigma }) => {
   fields.r1.input.value = r1;
   fields.r2.input.value = r2;
   fields.sigma.input.value = sigma;
-  run(true);
+  runNow();
   window.scrollTo({
     top: 0,
     behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
   });
 });
 
-for (const [field, label] of [
-  ["r1", "R₁"],
-  ["r2", "R₂"],
-] as const) {
+for (const field of ["r1", "r2"] as const) {
   const { input } = fields[field];
-  renderKeys($(`keys-${field}`), label, (text) => {
+  renderKeys($(`keys-${field}`), LABEL[field], (text) => {
     input.setRangeText(text, input.selectionStart!, input.selectionEnd!, "end");
     input.focus();
-    run(true);
+    runNow();
   });
 }
 
-for (const { input } of Object.values(fields)) input.addEventListener("input", () => run());
-run(true);
+for (const { input } of Object.values(fields)) input.addEventListener("input", runSoon);
+runNow();

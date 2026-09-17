@@ -1,6 +1,6 @@
 // Tokenizer and parser for the RegEq expression syntax, and the Σ-box parser.
 
-export type Token = {
+type Token = {
   kind: "sym" | "op" | "eps" | "any";
   v: string;
   /** Code-point index of the token (of the backslash, for an escape). */
@@ -43,7 +43,7 @@ export function assertNever(x: never): never {
 
 const OPS = new Set(["|", "*", "+", "?", "(", ")", "^"]);
 
-export function tokenize(src: string): { toks: Token[]; len: number } {
+function tokenize(src: string): { toks: Token[]; len: number } {
   const chars = Array.from(src);
   const toks: Token[] = [];
   let space = false;
@@ -151,8 +151,7 @@ export function parse(src: string): Node {
   }
 
   function atom(): Node {
-    const t = peek()!;
-    i++;
+    const t = toks[i++];
     if (isOp(t, "(")) {
       if (++parens > MAX_PARENS)
         throw new RegexSyntaxError("Parentheses are nested too deeply.", t.pos);
@@ -162,10 +161,18 @@ export function parse(src: string): Node {
       i++;
       return inner;
     }
-    if (t.kind === "sym") return { type: "sym", c: t.v, pos: t.pos };
-    if (t.kind === "eps") return { type: "eps" };
-    if (t.kind === "any") return { type: "any", pos: t.pos };
-    throw new RegexSyntaxError(`“${t.v}” needs something before it to apply to.`, t.pos);
+    switch (t.kind) {
+      case "sym":
+        return { type: "sym", c: t.v, pos: t.pos };
+      case "eps":
+        return { type: "eps" };
+      case "any":
+        return { type: "any", pos: t.pos };
+      case "op": // concat() never hands us | or ), so this is a postfix operator
+        throw new RegexSyntaxError(`“${t.v}” needs something before it to apply to.`, t.pos);
+      default:
+        return assertNever(t.kind);
+    }
   }
 
   const ast = union();
@@ -181,8 +188,7 @@ export function parse(src: string): Node {
  */
 export function parseSigma(src: string): Set<string> {
   const { toks } = tokenize(src);
-  const isSeparator = (t: Token | undefined) =>
-    !!t && !t.escaped && (t.v === "," || t.v === "{" || t.v === "}");
+  const isSeparator = (t: Token) => !t.escaped && (t.v === "," || t.v === "{" || t.v === "}");
   const out = new Set<string>();
   toks.forEach((t, k) => {
     if (t.kind === "eps" || t.kind === "any")
@@ -191,7 +197,8 @@ export function parseSigma(src: string): Set<string> {
         t.pos,
       );
     if (isSeparator(t)) return;
-    const [prev, next] = [toks[k - 1], toks[k + 1]];
+    const prev = toks[k - 1];
+    const next = toks[k + 1];
     // Only a dash written tight between two letters (a-z) looks like a range.
     const tight = !t.space && !next?.space;
     if (

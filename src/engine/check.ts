@@ -10,7 +10,7 @@ import {
 import { letters, parse, parseSigma, RegexSyntaxError, walk, type Node } from "./syntax";
 
 export type Field = "r1" | "r2" | "sigma";
-export type FieldError = { field: Field; message: string; pos?: number };
+type FieldError = { field: Field; message: string; pos?: number };
 
 export type CheckResult =
   /** Nothing to compare yet, or input errors; `message` explains what to do. */
@@ -29,7 +29,7 @@ export type CheckResult =
     };
 
 const SIGMA_SEPARATORS = new Set([",", "{", "}"]);
-const LABEL: Record<Field, string> = { r1: "R₁", r2: "R₂", sigma: "Σ" };
+export const LABEL: Record<Field, string> = { r1: "R₁", r2: "R₂", sigma: "Σ" };
 
 export function check(
   r1: string,
@@ -88,13 +88,12 @@ export function check(
       errors: [],
     };
 
-  const search = findDistinguishingWords(
+  const { only1, only2, explored, cutOff } = findDistinguishingWords(
     lazyDFA(buildNFA(ast1, alphabet)),
     lazyDFA(buildNFA(ast2, alphabet)),
     alphabet,
     limit,
   );
-  const { only1, only2, explored, cutOff } = search;
   if (only1 || only2)
     return { status: "differ", alphabet, explored, only1, only2, partial: cutOff, errors: [] };
   if (cutOff)

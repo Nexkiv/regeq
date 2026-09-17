@@ -1,5 +1,4 @@
 import type { CheckResult } from "./engine/check";
-import { el } from "./render";
 
 export type Example = {
   r1: string;
@@ -24,45 +23,3 @@ export const EXAMPLES: Example[] = [
     expected: "differ",
   },
 ];
-
-/** Symbols that are awkward to type, offered as insert buttons next to each expression box. */
-export const INSERT_KEYS = [
-  { text: "ε", className: "key eps" },
-  { text: "Σ", className: "key" },
-];
-
-export function renderExamples(tbody: HTMLElement, onLoad: (example: Example) => void) {
-  for (const example of EXAMPLES) {
-    const { r1, r2, sigma, shows } = example;
-    const load = el("button", "load", "Load") as HTMLButtonElement;
-    load.type = "button";
-    load.setAttribute("aria-label", `Load ${r1} and ${r2}`);
-    load.addEventListener("click", () => onLoad(example));
-    tbody.append(
-      el(
-        "tr",
-        "",
-        el("td", "expr", r1),
-        el("td", "expr", r2),
-        el("td", "expr", sigma ? `{${sigma}}` : ""),
-        el("td", "dim", shows),
-        el("td", "act", load),
-      ),
-    );
-  }
-}
-
-export function renderKeys(
-  container: HTMLElement,
-  label: string,
-  onInsert: (text: string) => void,
-) {
-  for (const { text, className } of INSERT_KEYS) {
-    const key = el("button", className, text) as HTMLButtonElement;
-    key.type = "button";
-    key.title = `Insert ${text}`;
-    key.setAttribute("aria-label", `Insert ${text} into ${label}`);
-    key.addEventListener("click", () => onInsert(text));
-    container.append(key);
-  }
-}

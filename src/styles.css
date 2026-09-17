@@ -1,9 +1,6 @@
 html {
   color-scheme: light dark;
 }
-body {
-  margin: 0;
-}
 [hidden] {
   display: none !important;
 }
@@ -41,6 +38,7 @@ body {
   box-sizing: border-box;
 }
 body {
+  margin: 0;
   background: var(--paper);
   color: var(--ink);
   font: 400 18px/1.6 var(--serif);

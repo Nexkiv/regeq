@@ -1,7 +1,12 @@
 // Turns check results into DOM, typeset like a textbook claim and proof.
 import { formatCount, visible, type CheckResult } from "./engine/check";
+import { EXAMPLES, type Example } from "./examples";
 
-export function el(tag: string, cls: string, ...kids: (Node | string)[]): HTMLElement {
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  cls: string,
+  ...kids: (Node | string)[]
+): HTMLElementTagNameMap[K] {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
   n.append(...kids);
@@ -137,4 +142,46 @@ export function showError(
     box.append(el("pre", "", chars.slice(0, pos).join(""), mark, chars.slice(pos + 1).join("")));
   }
   box.hidden = false;
+}
+
+export function renderExamples(tbody: HTMLElement, onLoad: (example: Example) => void) {
+  for (const example of EXAMPLES) {
+    const { r1, r2, sigma, shows } = example;
+    const load = el("button", "load", "Load");
+    load.type = "button";
+    load.setAttribute("aria-label", `Load ${r1} and ${r2}`);
+    load.addEventListener("click", () => onLoad(example));
+    tbody.append(
+      el(
+        "tr",
+        "",
+        el("td", "expr", r1),
+        el("td", "expr", r2),
+        el("td", "expr", sigma ? `{${sigma}}` : ""),
+        el("td", "dim", shows),
+        el("td", "act", load),
+      ),
+    );
+  }
+}
+
+/** Symbols that are awkward to type, offered as insert buttons next to each expression box. */
+const INSERT_KEYS = [
+  { text: "ε", className: "key eps" },
+  { text: "Σ", className: "key" },
+];
+
+export function renderKeys(
+  container: HTMLElement,
+  label: string,
+  onInsert: (text: string) => void,
+) {
+  for (const { text, className } of INSERT_KEYS) {
+    const key = el("button", className, text);
+    key.type = "button";
+    key.title = `Insert ${text}`;
+    key.setAttribute("aria-label", `Insert ${text} into ${label}`);
+    key.addEventListener("click", () => onInsert(text));
+    container.append(key);
+  }
 }
